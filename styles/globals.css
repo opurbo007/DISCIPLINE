@@ -1,0 +1,197 @@
+/* styles/globals.css */
+/* ─────────────────────────────────────────────────────────────────────────── */
+
+/* ── Google Fonts ──────────────────────────────────────────────────────────── */
+@import url("https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Bebas+Neue&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── CSS Custom Properties ─────────────────────────────────────────────────── */
+:root {
+  --color-arc:     #00d4ff;
+  --color-ember:   #f59e0b;
+  --color-bull:    #10b981;
+  --color-bear:    #ef4444;
+  --color-surface: #0d1117;
+  --color-abyss:   #080c14;
+
+  /* Glass card variables */
+  --glass-bg:      rgba(255,255,255,0.04);
+  --glass-border:  rgba(255,255,255,0.07);
+  --glass-blur:    16px;
+}
+
+/* ── Base reset ────────────────────────────────────────────────────────────── */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  background-color: var(--color-abyss);
+  color: #e2e8f0;
+  font-family: 'DM Sans', sans-serif;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ── Scrollbar styling ─────────────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: rgba(255,255,255,0.02); }
+::-webkit-scrollbar-thumb {
+  background: rgba(0,212,255,0.25);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover { background: rgba(0,212,255,0.5); }
+
+/* ── Selection ─────────────────────────────────────────────────────────────── */
+::selection {
+  background: rgba(0,212,255,0.3);
+  color: #fff;
+}
+
+/* ── Glass card utility ────────────────────────────────────────────────────── */
+@layer components {
+  .glass-card {
+    @apply relative overflow-hidden rounded-xl border;
+    background: var(--glass-bg);
+    border-color: var(--glass-border);
+    backdrop-filter: blur(var(--glass-blur));
+    -webkit-backdrop-filter: blur(var(--glass-blur));
+    box-shadow: 0 0 0 1px rgba(255,255,255,0.07), 0 8px 32px rgba(0,0,0,0.4);
+  }
+
+  .glass-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent);
+    pointer-events: none;
+  }
+
+  .glass-card-arc {
+    @apply glass-card;
+    border-color: rgba(0,212,255,0.15);
+    box-shadow: 0 0 0 1px rgba(0,212,255,0.12), 0 8px 32px rgba(0,0,0,0.5),
+                inset 0 1px 0 rgba(0,212,255,0.08);
+  }
+
+  .glass-card-ember {
+    @apply glass-card;
+    border-color: rgba(245,158,11,0.15);
+    box-shadow: 0 0 0 1px rgba(245,158,11,0.12), 0 8px 32px rgba(0,0,0,0.5),
+                inset 0 1px 0 rgba(245,158,11,0.08);
+  }
+
+  .glass-card-bull {
+    @apply glass-card;
+    border-color: rgba(16,185,129,0.15);
+    box-shadow: 0 0 0 1px rgba(16,185,129,0.12), 0 8px 32px rgba(0,0,0,0.5);
+  }
+
+  .glass-card-bear {
+    @apply glass-card;
+    border-color: rgba(239,68,68,0.15);
+    box-shadow: 0 0 0 1px rgba(239,68,68,0.12), 0 8px 32px rgba(0,0,0,0.5);
+  }
+
+  /* Field label — used in forms */
+  .field-label {
+    @apply text-[11px] text-slate-500 font-mono uppercase tracking-wider mb-1.5 block;
+  }
+  .glass-input {
+    @apply w-full rounded-lg border px-3 py-2 text-sm text-slate-200 placeholder-slate-500
+           outline-none transition-all duration-200;
+    background: rgba(255,255,255,0.04);
+    border-color: rgba(255,255,255,0.08);
+  }
+  .glass-input:focus {
+    border-color: rgba(0,212,255,0.4);
+    box-shadow: 0 0 0 3px rgba(0,212,255,0.08);
+    background: rgba(255,255,255,0.06);
+  }
+
+  /* Button variants */
+  .btn-arc {
+    @apply inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium
+           transition-all duration-200 cursor-pointer;
+    background: rgba(0,212,255,0.1);
+    color: var(--color-arc);
+    border: 1px solid rgba(0,212,255,0.2);
+  }
+  .btn-arc:hover {
+    background: rgba(0,212,255,0.18);
+    box-shadow: 0 0 12px rgba(0,212,255,0.2);
+  }
+
+  .btn-ember {
+    @apply inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium
+           transition-all duration-200 cursor-pointer;
+    background: rgba(245,158,11,0.1);
+    color: var(--color-ember);
+    border: 1px solid rgba(245,158,11,0.2);
+  }
+  .btn-ember:hover {
+    background: rgba(245,158,11,0.18);
+  }
+
+  .btn-danger {
+    @apply inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium
+           transition-all duration-200 cursor-pointer;
+    background: rgba(239,68,68,0.08);
+    color: var(--color-bear);
+    border: 1px solid rgba(239,68,68,0.15);
+  }
+  .btn-danger:hover {
+    background: rgba(239,68,68,0.15);
+  }
+
+  .btn-ghost {
+    @apply inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium
+           transition-all duration-200 cursor-pointer text-slate-400;
+    border: 1px solid transparent;
+  }
+  .btn-ghost:hover {
+    background: rgba(255,255,255,0.06);
+    color: #fff;
+    border-color: rgba(255,255,255,0.08);
+  }
+}
+
+/* ── Ticker animation ──────────────────────────────────────────────────────── */
+.ticker-inner {
+  /* Width is set dynamically; animation moves it one full "set" width (33.33%) */
+  animation: ticker 35s linear infinite;
+}
+.ticker-inner:hover {
+  animation-play-state: paused;
+  cursor: default;
+}
+
+/* ── Price card shimmer loading ────────────────────────────────────────────── */
+.shimmer-bg {
+  background: linear-gradient(
+    90deg,
+    rgba(255,255,255,0.04) 0%,
+    rgba(255,255,255,0.08) 50%,
+    rgba(255,255,255,0.04) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s linear infinite;
+}
+
+/* ── Focus ring ────────────────────────────────────────────────────────────── */
+:focus-visible {
+  outline: 2px solid rgba(0,212,255,0.5);
+  outline-offset: 2px;
+}
