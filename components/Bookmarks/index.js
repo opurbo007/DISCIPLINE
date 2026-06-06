@@ -232,7 +232,7 @@ function BookmarkCard({ bookmark, onDelete, onEdit }) {
 }
 
 // ── Main component ────────────────────────────────────────────────────────────
-export default function Bookmarks() {
+export default function Bookmarks({ compact = false }) {
   const [showForm,      setShowForm]      = useState(false);
   const [adding,        setAdding]        = useState(false);
   const [activeFilter,  setActiveFilter]  = useState("all");
@@ -347,7 +347,14 @@ export default function Bookmarks() {
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+        <div
+          className={clsx(
+            "grid gap-3",
+            compact
+              ? "grid-cols-1"
+              : "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4",
+          )}
+        >
           {filtered.map((bm, i) => (
             <div
               key={bm._id}

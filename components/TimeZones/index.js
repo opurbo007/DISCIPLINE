@@ -210,7 +210,7 @@ function SessionBar({ date, market, status, accent }) {
 }
 
 // ── Main component ────────────────────────────────────────────────────────────
-export default function TimeZones() {
+export default function TimeZones({ compact = false }) {
   const [times, setTimes] = useState({});
 
   useEffect(() => {
@@ -232,7 +232,12 @@ export default function TimeZones() {
         <h2 className="font-display text-2xl tracking-wider text-white">MARKET SESSIONS</h2>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+      <div
+        className={clsx(
+          "grid gap-3",
+          compact ? "grid-cols-1" : "grid-cols-1 sm:grid-cols-3",
+        )}
+      >
         {MARKETS.map((market, i) => (
           <div
             key={market.id}
