@@ -1,17 +1,15 @@
 import Head from "next/head";
 import { useEffect, useState } from "react";
-import { Bookmark, Clock3, StickyNote, TrendingUp } from "lucide-react";
+import { Bookmark, Clock3, TrendingUp } from "lucide-react";
 import Layout from "@/components/Layout";
 import MarketPrices from "@/components/MarketPrices";
 import TimeZones from "@/components/TimeZones";
 import Bookmarks from "@/components/Bookmarks";
-import Notes from "@/components/Notes";
 import AuthGuard from "@/components/Auth/AuthGuard";
 
 function DashboardHeader() {
   const shortcuts = [
     { href: "#prices", label: "Prices", icon: TrendingUp },
-    { href: "#notes", label: "Notes", icon: StickyNote },
     { href: "#sessions", label: "Sessions", icon: Clock3 },
     { href: "#bookmarks", label: "Links", icon: Bookmark },
   ];
@@ -60,20 +58,14 @@ export default function Dashboard() {
             <MarketPrices />
           </section>
 
-          <div className="grid grid-cols-1 gap-8 xl:grid-cols-[minmax(0,1fr)_380px] xl:items-start">
-            <section id="notes" className="scroll-mt-24">
-              <Notes />
+          <div className="grid grid-cols-1 gap-8 xl:grid-cols-[420px_minmax(0,1fr)] xl:items-start">
+            <section id="sessions" className="scroll-mt-24 xl:sticky xl:top-20">
+              {mounted && <TimeZones compact />}
             </section>
 
-            <aside className="space-y-8 xl:sticky xl:top-20">
-              <section id="sessions" className="scroll-mt-24">
-                {mounted && <TimeZones compact />}
-              </section>
-
-              <section id="bookmarks" className="scroll-mt-24">
-                <Bookmarks compact />
-              </section>
-            </aside>
+            <section id="bookmarks" className="scroll-mt-24">
+              <Bookmarks />
+            </section>
           </div>
         </div>
       </Layout>
