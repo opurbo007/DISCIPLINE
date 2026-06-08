@@ -116,7 +116,23 @@ const CRYPTO_META = {
  */
 const FINNHUB_STOCKS = [
   {
-    ticker: "SPX",
+    ticker: "OANDA:XAU_USD",
+    id: "xau",
+    symbol: "GOLD",
+    name: "Gold (XAU)",
+    icon: "🥇",
+    category: "commodity",
+  },
+  {
+    ticker: "OANDA:XAG_USD",
+    id: "xag",
+    symbol: "SILVER",
+    name: "Silver (SLV)",
+    icon: "🥈",
+    category: "commodity",
+  },
+  {
+    ticker: "^SPX",
     id: "spx",
     symbol: "S&P 500",
     name: "S&P 500 (SPX)",
@@ -124,7 +140,7 @@ const FINNHUB_STOCKS = [
     category: "index",
   },
   {
-    ticker: "NDX",
+    ticker: "^NDX",
     id: "ndx",
     symbol: "NASDAQ",
     name: "NASDAQ 100 (NDX)",
@@ -153,22 +169,6 @@ const FINNHUB_STOCKS = [
     symbol: "WTI",
     name: "WTI Crude (USO)",
     icon: "🛢",
-    category: "commodity",
-  },
-  {
-    ticker: "XAU",
-    id: "xau",
-    symbol: "GOLD",
-    name: "Gold (XAU)",
-    icon: "🥇",
-    category: "commodity",
-  },
-  {
-    ticker: "XAG",
-    id: "xag",
-    symbol: "SILVER",
-    name: "Silver (SLV)",
-    icon: "🥈",
     category: "commodity",
   },
 ];
@@ -213,7 +213,6 @@ async function fetchFinnhubQuote(ticker, meta) {
   };
 }
 
-
 async function fetchDXY() {
   const url =
     "https://api.frankfurter.app/latest?from=USD&to=EUR,JPY,GBP,CAD,SEK,CHF";
@@ -225,7 +224,6 @@ async function fetchDXY() {
 
   const r = data.rates;
   if (!r?.EUR) throw new Error("Frankfurter: rates missing from response");
-
 
   const EUR_W = 0.576; // Euro
   const JPY_W = 0.136; // Japanese Yen
