@@ -20,7 +20,7 @@
  *  – Real coin logos from CoinGecko for any coin
  */
 
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import useSWR from "swr";
 import {
   Plus, Trash2, Pencil, X, Check, TrendingUp, TrendingDown,
@@ -113,6 +113,142 @@ function StatCard({ label, value, sub, icon: Icon, color = "arc", trend }) {
           {trend >= 0 ? <TrendingUp size={10} /> : <TrendingDown size={10} />}
           {fmtPct(trend)}
         </div>
+      )}
+    </div>
+  );
+}
+
+function AssetAllocationPanel({
+  totalAssetInput,
+  setTotalAssetInput,
+  totalAsset,
+  totalInvested,
+  totalValue,
+  pnl,
+}) {
+  const boughtPct = totalAsset > 0 ? (totalInvested / totalAsset) * 100 : 0;
+  const left = totalAsset > 0 ? totalAsset - totalInvested : 0;
+  const leftPct = totalAsset > 0 ? (left / totalAsset) * 100 : 0;
+  const pnlOfTotalPct = totalAsset > 0 ? (pnl / totalAsset) * 100 : 0;
+  const currentAssetValue = totalAsset > 0 ? left + totalValue : totalValue;
+  const overAllocated = left < 0;
+
+  const investedWidth = totalAsset > 0
+    ? Math.min(100, Math.max(0, boughtPct))
+    : 0;
+  const leftWidth = totalAsset > 0
+    ? Math.min(100, Math.max(0, leftPct))
+    : 0;
+
+  return (
+    <div className="glass-card p-5">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+        <div>
+          <div className="flex items-center gap-2">
+            <Wallet size={16} className="text-[#00d4ff]" />
+            <h3 className="font-display text-2xl tracking-wider text-white">
+              TOTAL ASSET
+            </h3>
+          </div>
+        </div>
+
+        <label className="w-full lg:w-64">
+          <span className="field-label">Total Asset (USD)</span>
+          <div className="relative">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-600 font-mono text-sm">
+              $
+            </span>
+            <input
+              type="number"
+              step="any"
+              min="0"
+              className="glass-input pl-6 font-mono"
+              placeholder="10000"
+              value={totalAssetInput}
+              onChange={(e) => setTotalAssetInput(e.target.value)}
+            />
+          </div>
+        </label>
+      </div>
+
+      <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
+        <div className="rounded-lg border border-white/8 bg-white/[0.025] p-4">
+          <p className="text-[10px] font-mono uppercase tracking-wider text-slate-600">
+            Total Asset
+          </p>
+          <p className="mt-2 font-mono text-xl font-bold text-white">
+            {fmt$(totalAsset)}
+          </p>
+          <p className="mt-1 text-xs font-mono text-slate-600">
+            capital entered
+          </p>
+        </div>
+
+        <div className="rounded-lg border border-white/8 bg-white/[0.025] p-4">
+          <p className="text-[10px] font-mono uppercase tracking-wider text-slate-600">
+            Buy
+          </p>
+          <p className="mt-2 font-mono text-xl font-bold text-[#00d4ff]">
+            {fmtPct(boughtPct).replace("+", "")}
+          </p>
+          <p className="mt-1 text-xs font-mono text-slate-600">
+            {fmt$(totalInvested)} invested
+          </p>
+        </div>
+
+        <div className="rounded-lg border border-white/8 bg-white/[0.025] p-4">
+          <p className="text-[10px] font-mono uppercase tracking-wider text-slate-600">
+            Left
+          </p>
+          <p className={clsx("mt-2 font-mono text-xl font-bold", left >= 0 ? "text-[#f59e0b]" : "text-red-400")}>
+            {left >= 0 ? "" : "-"}{fmt$(left)}
+          </p>
+          <p className="mt-1 text-xs font-mono text-slate-600">
+            {fmtPct(leftPct).replace("+", "")} remaining
+          </p>
+        </div>
+
+        <div className="rounded-lg border border-white/8 bg-white/[0.025] p-4">
+          <p className="text-[10px] font-mono uppercase tracking-wider text-slate-600">
+            Gain / Loss
+          </p>
+          <p className={clsx("mt-2 font-mono text-xl font-bold", pnlClass(pnl))}>
+            {pnl >= 0 ? "+" : "-"}{fmt$(pnl)}
+          </p>
+          <p className={clsx("mt-1 text-xs font-mono", pnlClass(pnlOfTotalPct))}>
+            {fmtPct(pnlOfTotalPct)} from total asset
+          </p>
+        </div>
+
+        <div className="rounded-lg border border-white/8 bg-white/[0.025] p-4">
+          <p className="text-[10px] font-mono uppercase tracking-wider text-slate-600">
+            Asset After P&L
+          </p>
+          <p className="mt-2 font-mono text-xl font-bold text-white">
+            {fmt$(currentAssetValue)}
+          </p>
+          <p className="mt-1 text-xs font-mono text-slate-600">
+            left + current holding value
+          </p>
+        </div>
+      </div>
+
+      <div className="mt-4 h-2 overflow-hidden rounded-full bg-white/5">
+        <div className="flex h-full">
+          <div
+            className={clsx(overAllocated ? "bg-red-400" : "bg-[#00d4ff]")}
+            style={{ width: `${investedWidth}%` }}
+          />
+          <div
+            className="bg-[#f59e0b]"
+            style={{ width: `${leftWidth}%` }}
+          />
+        </div>
+      </div>
+      {overAllocated && (
+        <p className="mt-2 text-[10px] font-mono text-red-400">
+          Buy amount is above total asset by {fmt$(Math.abs(left))}.
+        </p>
       )}
     </div>
   );
@@ -471,10 +607,24 @@ function CoinRow({ coin, priceData, onDeleteLot, onEditLot, editingId, setEditin
 
 // ── Main Portfolio ────────────────────────────────────────────────────────────
 export default function Portfolio() {
-  const [showForm,  setShowForm]  = useState(false);
-  const [adding,    setAdding]    = useState(false);
-  const [editingId, setEditingId] = useState(null);
-  const [sort,      setSort]      = useState({ col: "value", dir: "desc" });
+  const [showForm,        setShowForm]        = useState(false);
+  const [adding,          setAdding]          = useState(false);
+  const [editingId,       setEditingId]       = useState(null);
+  const [sort,            setSort]            = useState({ col: "value", dir: "desc" });
+  const [totalAssetInput, setTotalAssetInput] = useState("");
+
+  useEffect(() => {
+    const saved = window.localStorage.getItem("td-total-asset");
+    if (saved) setTotalAssetInput(saved);
+  }, []);
+
+  useEffect(() => {
+    if (totalAssetInput) {
+      window.localStorage.setItem("td-total-asset", totalAssetInput);
+    } else {
+      window.localStorage.removeItem("td-total-asset");
+    }
+  }, [totalAssetInput]);
 
   // Holdings from MongoDB
   const { data: holdingsData, mutate: mutateHoldings } = useSWR("/api/portfolio");
@@ -591,6 +741,7 @@ export default function Portfolio() {
   };
 
   const coinsWithoutPrice = aggregated.filter((c) => prices[c.coinId]?.price == null).map((c) => c.symbol);
+  const totalAsset = Number(totalAssetInput) || 0;
 
   return (
     <div className="space-y-6">
@@ -620,6 +771,15 @@ export default function Portfolio() {
       </div>
 
       {/* ── Summary cards ────────────────────────────────────────────── */}
+      <AssetAllocationPanel
+        totalAssetInput={totalAssetInput}
+        setTotalAssetInput={setTotalAssetInput}
+        totalAsset={totalAsset}
+        totalInvested={stats.totalInvested}
+        totalValue={stats.totalValue}
+        pnl={stats.pnl}
+      />
+
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <StatCard label="Total Invested" icon={DollarSign} color="arc"
           value={fmt$(stats.totalInvested)}
