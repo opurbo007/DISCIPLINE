@@ -111,23 +111,23 @@ const CRYPTO_META = {
  * Fired in parallel via Promise.allSettled — total: 6 calls.
  *
  * ETF proxies used because Finnhub free tier gives real-time ETF data:
- *   SPY → S&P 500   QQQ → NASDAQ 100   DIA → Dow Jones
- *   TLT → US Bonds  USO → WTI Crude    GLD → Gold
+ *   SPX → S&P 500   NDX → NASDAQ 100   DIA → Dow Jones
+ *   TLT → US Bonds  USO → WTI Crude    XAU → Gold
  */
 const FINNHUB_STOCKS = [
   {
-    ticker: "SPY",
-    id: "spy",
+    ticker: "SPX",
+    id: "spx",
     symbol: "S&P 500",
-    name: "S&P 500 (SPY)",
+    name: "S&P 500 (SPX)",
     icon: "📈",
     category: "index",
   },
   {
-    ticker: "QQQ",
-    id: "qqq",
+    ticker: "NDX",
+    id: "ndx",
     symbol: "NASDAQ",
-    name: "NASDAQ 100 (QQQ)",
+    name: "NASDAQ 100 (NDX)",
     icon: "💻",
     category: "index",
   },
@@ -156,16 +156,16 @@ const FINNHUB_STOCKS = [
     category: "commodity",
   },
   {
-    ticker: "GLD",
-    id: "gld",
+    ticker: "XAU",
+    id: "xau",
     symbol: "GOLD",
-    name: "Gold (GLD)",
+    name: "Gold (XAU)",
     icon: "🥇",
     category: "commodity",
   },
   {
-    ticker: "SLV",
-    id: "silver",
+    ticker: "XAG",
+    id: "xag",
     symbol: "SILVER",
     name: "Silver (SLV)",
     icon: "🥈",
