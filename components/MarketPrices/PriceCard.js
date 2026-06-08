@@ -17,7 +17,7 @@ import clsx from "clsx";
  * Formats a price number with appropriate decimal places.
  * BTC: 2 dp, small cryptos: 4–6 dp, stocks/indices: 2 dp.
  */
-function formatPrice(price, symbol) {
+function formatPrice(price, category) {
   if (price === null || price === undefined) return "—";
   const absPrice = Math.abs(price);
   if (absPrice >= 1000) return price.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
