@@ -111,39 +111,23 @@ const CRYPTO_META = {
  * Fired in parallel via Promise.allSettled — total: 6 calls.
  *
  * ETF proxies used because Finnhub free tier gives real-time ETF data:
- *   SPX → S&P 500   NDX → NASDAQ 100   DIA → Dow Jones
- *   TLT → US Bonds  USO → WTI Crude    XAU → Gold
+ *   SPY → S&P 500   QQQ → NASDAQ 100   DIA → Dow Jones
+ *   TLT → US Bonds  USO → WTI Crude    GLD → Gold
  */
 const FINNHUB_STOCKS = [
   {
-    ticker: "OANDA:XAU_USD",
-    id: "xau",
-    symbol: "GOLD",
-    name: "Gold (XAU)",
-    icon: "🥇",
-    category: "commodity",
-  },
-  {
-    ticker: "OANDA:XAG_USD",
-    id: "xag",
-    symbol: "SILVER",
-    name: "Silver (SLV)",
-    icon: "🥈",
-    category: "commodity",
-  },
-  {
-    ticker: "^SPX",
-    id: "spx",
+    ticker: "SPY",
+    id: "spy",
     symbol: "S&P 500",
-    name: "S&P 500 (SPX)",
+    name: "S&P 500 (SPY)",
     icon: "📈",
     category: "index",
   },
   {
-    ticker: "^NDX",
-    id: "ndx",
+    ticker: "QQQ",
+    id: "qqq",
     symbol: "NASDAQ",
-    name: "NASDAQ 100 (NDX)",
+    name: "NASDAQ 100 (QQQ)",
     icon: "💻",
     category: "index",
   },
@@ -169,6 +153,22 @@ const FINNHUB_STOCKS = [
     symbol: "WTI",
     name: "WTI Crude (USO)",
     icon: "🛢",
+    category: "commodity",
+  },
+  {
+    ticker: "GLD",
+    id: "gld",
+    symbol: "GOLD",
+    name: "Gold (GLD)",
+    icon: "🥇",
+    category: "commodity",
+  },
+  {
+    ticker: "SLV",
+    id: "silver",
+    symbol: "SILVER",
+    name: "Silver (SLV)",
+    icon: "🥈",
     category: "commodity",
   },
 ];
