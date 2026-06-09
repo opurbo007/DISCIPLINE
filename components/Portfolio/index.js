@@ -1,47 +1,45 @@
-/**
- * components/Portfolio/index.js
- * ─────────────────────────────────────────────────────────────────────────────
- * Fully dynamic crypto portfolio tracker.
- * Supports ANY coin from CoinGecko's 14,000+ catalogue — no fixed list.
- *
- * Architecture:
- *  • /api/portfolio        → user's holdings (MongoDB)
- *  • /api/portfolio/prices → live prices for exactly the user's coins (CoinGecko)
- *  • CoinSearch component  → search + select any coin while adding a holding
- *
- * Features:
- *  – Add any coin via live search (14,000+ coins, debounced, keyboard nav)
- *  – Current price auto-filled on coin selection
- *  – Multiple lots per coin with weighted average cost
- *  – P&L in $ and % per lot and aggregated per coin
- *  – Sortable table columns
- *  – Expand coin row → see individual lots with edit / delete
- *  – Summary cards: invested · value · total P&L · best performer
- *  – Real coin logos from CoinGecko for any coin
- */
-
 import { useState, useMemo, useCallback, useEffect } from "react";
 import useSWR from "swr";
 import {
-  Plus, Trash2, Pencil, X, Check, TrendingUp, TrendingDown,
-  DollarSign, Wallet, BarChart3, Award, ChevronUp, ChevronDown,
-  ChevronsUpDown, Loader2, AlertCircle, Calendar, FileText,
+  Plus,
+  Trash2,
+  Pencil,
+  X,
+  Check,
+  TrendingUp,
+  TrendingDown,
+  DollarSign,
+  Wallet,
+  BarChart3,
+  Award,
+  ChevronUp,
+  ChevronDown,
+  ChevronsUpDown,
+  Loader2,
+  AlertCircle,
+  Calendar,
+  FileText,
   RefreshCw,
 } from "lucide-react";
 import clsx from "clsx";
 import CoinSearch from "./CoinSearch";
 
-// ── Formatters ────────────────────────────────────────────────────────────────
+// ── Formatters
 const fmt$ = (n, dp = 2) =>
-  n == null ? "—"
-  : `$${Math.abs(n).toLocaleString("en-US", { minimumFractionDigits: dp, maximumFractionDigits: dp })}`;
+  n == null
+    ? "—"
+    : `$${Math.abs(n).toLocaleString("en-US", { minimumFractionDigits: dp, maximumFractionDigits: dp })}`;
 
 const fmtUnits = (n) =>
-  n == null ? "—"
-  : n < 0.0001  ? n.toFixed(8)
-  : n < 1       ? n.toFixed(6)
-  : n < 1000    ? n.toFixed(4)
-  : n.toLocaleString("en-US", { maximumFractionDigits: 2 });
+  n == null
+    ? "—"
+    : n < 0.0001
+      ? n.toFixed(8)
+      : n < 1
+        ? n.toFixed(6)
+        : n < 1000
+          ? n.toFixed(4)
+          : n.toLocaleString("en-US", { maximumFractionDigits: 2 });
 
 const fmtPct = (n) =>
   n == null ? "—" : `${n >= 0 ? "+" : ""}${n.toFixed(2)}%`;
@@ -50,9 +48,11 @@ const pnlClass = (n) =>
   n > 0 ? "text-emerald-400" : n < 0 ? "text-red-400" : "text-slate-500";
 
 const pnlBg = (n) =>
-  n > 0 ? "bg-emerald-400/10 text-emerald-400"
-  : n < 0 ? "bg-red-400/10 text-red-400"
-  : "bg-white/5 text-slate-500";
+  n > 0
+    ? "bg-emerald-400/10 text-emerald-400"
+    : n < 0
+      ? "bg-red-400/10 text-red-400"
+      : "bg-white/5 text-slate-500";
 
 // ── Coin logo — handles CoinGecko thumbnail URLs and emoji fallbacks ───────────
 function CoinLogo({ icon, symbol, size = 32 }) {
@@ -68,7 +68,8 @@ function CoinLogo({ icon, symbol, size = 32 }) {
         className="rounded-full object-cover"
         onError={(e) => {
           e.currentTarget.style.display = "none";
-          e.currentTarget.nextSibling?.style && (e.currentTarget.nextSibling.style.display = "flex");
+          e.currentTarget.nextSibling?.style &&
+            (e.currentTarget.nextSibling.style.display = "flex");
         }}
       />
     );
@@ -77,7 +78,9 @@ function CoinLogo({ icon, symbol, size = 32 }) {
     <div
       className="rounded-lg flex items-center justify-center font-bold text-slate-400"
       style={{
-        width: size, height: size, fontSize: size * 0.45,
+        width: size,
+        height: size,
+        fontSize: size * 0.45,
         background: "rgba(255,255,255,0.06)",
         border: "1px solid rgba(255,255,255,0.08)",
       }}
@@ -90,26 +93,60 @@ function CoinLogo({ icon, symbol, size = 32 }) {
 // ── Summary stat card ─────────────────────────────────────────────────────────
 function StatCard({ label, value, sub, icon: Icon, color = "arc", trend }) {
   const colorMap = {
-    arc:   { text: "text-[#00d4ff]",   bg: "bg-[rgba(0,212,255,0.08)]",  card: "glass-card-arc"   },
-    ember: { text: "text-[#f59e0b]",   bg: "bg-[rgba(245,158,11,0.08)]", card: "glass-card-ember" },
-    bull:  { text: "text-emerald-400", bg: "bg-emerald-400/10",           card: "glass-card-bull"  },
-    bear:  { text: "text-red-400",     bg: "bg-red-400/10",               card: "glass-card-bear"  },
+    arc: {
+      text: "text-[#00d4ff]",
+      bg: "bg-[rgba(0,212,255,0.08)]",
+      card: "glass-card-arc",
+    },
+    ember: {
+      text: "text-[#f59e0b]",
+      bg: "bg-[rgba(245,158,11,0.08)]",
+      card: "glass-card-ember",
+    },
+    bull: {
+      text: "text-emerald-400",
+      bg: "bg-emerald-400/10",
+      card: "glass-card-bull",
+    },
+    bear: {
+      text: "text-red-400",
+      bg: "bg-red-400/10",
+      card: "glass-card-bear",
+    },
   };
   const c = colorMap[color];
   return (
     <div className={clsx("p-5 flex flex-col gap-3", c.card)}>
       <div className="flex items-center justify-between">
-        <span className="text-slate-500 text-xs font-mono uppercase tracking-wider">{label}</span>
-        <div className={clsx("w-8 h-8 rounded-lg flex items-center justify-center", c.bg)}>
+        <span className="text-slate-500 text-xs font-mono uppercase tracking-wider">
+          {label}
+        </span>
+        <div
+          className={clsx(
+            "w-8 h-8 rounded-lg flex items-center justify-center",
+            c.bg,
+          )}
+        >
           <Icon size={15} className={c.text} />
         </div>
       </div>
       <div>
-        <p className={clsx("font-mono font-bold text-2xl leading-none", c.text)}>{value}</p>
-        {sub && <p className="text-slate-600 text-xs font-mono mt-1.5">{sub}</p>}
+        <p
+          className={clsx("font-mono font-bold text-2xl leading-none", c.text)}
+        >
+          {value}
+        </p>
+        {sub && (
+          <p className="text-slate-600 text-xs font-mono mt-1.5">{sub}</p>
+        )}
       </div>
       {trend !== undefined && (
-        <div className={clsx("inline-flex items-center gap-1 text-xs font-mono px-2 py-1 rounded-full self-start", pnlBg(trend))}>
+        <div
+          className={clsx(
+            "inline-flex items-center gap-1 text-xs font-mono px-2 py-1 rounded-full self-start",
+            pnlBg(trend),
+          )}
+        >
           {trend >= 0 ? <TrendingUp size={10} /> : <TrendingDown size={10} />}
           {fmtPct(trend)}
         </div>
@@ -127,19 +164,17 @@ function AssetAllocationPanel({
   pnl,
 }) {
   const startingAsset = totalAsset + totalInvested;
-  const boughtPct = startingAsset > 0 ? (totalInvested / startingAsset) * 100 : 0;
+  const boughtPct =
+    startingAsset > 0 ? (totalInvested / startingAsset) * 100 : 0;
   const left = totalAsset;
   const leftPct = startingAsset > 0 ? (left / startingAsset) * 100 : 0;
   const pnlOfTotalPct = startingAsset > 0 ? (pnl / startingAsset) * 100 : 0;
   const currentAssetValue = totalAsset + totalValue;
   const overAllocated = totalAsset < 0;
 
-  const investedWidth = startingAsset > 0
-    ? Math.min(100, Math.max(0, boughtPct))
-    : 0;
-  const leftWidth = startingAsset > 0
-    ? Math.min(100, Math.max(0, leftPct))
-    : 0;
+  const investedWidth =
+    startingAsset > 0 ? Math.min(100, Math.max(0, boughtPct)) : 0;
+  const leftWidth = startingAsset > 0 ? Math.min(100, Math.max(0, leftPct)) : 0;
 
   return (
     <div className="glass-card p-5">
@@ -200,8 +235,14 @@ function AssetAllocationPanel({
           <p className="text-[10px] font-mono uppercase tracking-wider text-slate-600">
             Left
           </p>
-          <p className={clsx("mt-2 font-mono text-xl font-bold", left >= 0 ? "text-[#f59e0b]" : "text-red-400")}>
-            {left >= 0 ? "" : "-"}{fmt$(left)}
+          <p
+            className={clsx(
+              "mt-2 font-mono text-xl font-bold",
+              left >= 0 ? "text-[#f59e0b]" : "text-red-400",
+            )}
+          >
+            {left >= 0 ? "" : "-"}
+            {fmt$(left)}
           </p>
           <p className="mt-1 text-xs font-mono text-slate-600">
             {fmtPct(leftPct).replace("+", "")} cash available
@@ -212,10 +253,15 @@ function AssetAllocationPanel({
           <p className="text-[10px] font-mono uppercase tracking-wider text-slate-600">
             Gain / Loss
           </p>
-          <p className={clsx("mt-2 font-mono text-xl font-bold", pnlClass(pnl))}>
-            {pnl >= 0 ? "+" : "-"}{fmt$(pnl)}
+          <p
+            className={clsx("mt-2 font-mono text-xl font-bold", pnlClass(pnl))}
+          >
+            {pnl >= 0 ? "+" : "-"}
+            {fmt$(pnl)}
           </p>
-          <p className={clsx("mt-1 text-xs font-mono", pnlClass(pnlOfTotalPct))}>
+          <p
+            className={clsx("mt-1 text-xs font-mono", pnlClass(pnlOfTotalPct))}
+          >
             {fmtPct(pnlOfTotalPct)} from total asset
           </p>
         </div>
@@ -239,10 +285,7 @@ function AssetAllocationPanel({
             className={clsx(overAllocated ? "bg-red-400" : "bg-[#00d4ff]")}
             style={{ width: `${investedWidth}%` }}
           />
-          <div
-            className="bg-[#f59e0b]"
-            style={{ width: `${leftWidth}%` }}
-          />
+          <div className="bg-[#f59e0b]" style={{ width: `${leftWidth}%` }} />
         </div>
       </div>
       {overAllocated && (
@@ -256,25 +299,35 @@ function AssetAllocationPanel({
 
 // ── Add / Edit holding form ───────────────────────────────────────────────────
 function HoldingForm({ initial = {}, onSubmit, onCancel, loading }) {
-  const [selectedCoin,  setSelectedCoin]  = useState(
+  const [selectedCoin, setSelectedCoin] = useState(
     initial.coinId
-      ? { coinId: initial.coinId, symbol: initial.symbol, name: initial.name, icon: initial.icon }
-      : null
+      ? {
+          coinId: initial.coinId,
+          symbol: initial.symbol,
+          name: initial.name,
+          icon: initial.icon,
+        }
+      : null,
   );
-  const [units,          setUnits]          = useState(initial.units         || "");
-  const [purchasePrice,  setPurchasePrice]  = useState(initial.purchasePrice || "");
-  const [purchaseDate,   setPurchaseDate]   = useState(
+  const [units, setUnits] = useState(initial.units || "");
+  const [purchasePrice, setPurchasePrice] = useState(
+    initial.purchasePrice || "",
+  );
+  const [purchaseDate, setPurchaseDate] = useState(
     initial.purchaseDate
       ? new Date(initial.purchaseDate).toISOString().split("T")[0]
-      : new Date().toISOString().split("T")[0]
+      : new Date().toISOString().split("T")[0],
   );
-  const [notes,          setNotes]          = useState(initial.notes || "");
-  const [coinError,      setCoinError]      = useState("");
+  const [notes, setNotes] = useState(initial.notes || "");
+  const [coinError, setCoinError] = useState("");
 
   // When a coin is selected, auto-fill current price into empty price field
-  const handlePriceHint = useCallback((price) => {
-    if (!purchasePrice) setPurchasePrice(String(price));
-  }, [purchasePrice]);
+  const handlePriceHint = useCallback(
+    (price) => {
+      if (!purchasePrice) setPurchasePrice(String(price));
+    },
+    [purchasePrice],
+  );
 
   const handleCoinChange = useCallback((coin) => {
     setSelectedCoin(coin);
@@ -290,25 +343,25 @@ function HoldingForm({ initial = {}, onSubmit, onCancel, loading }) {
     if (!units || !purchasePrice) return;
 
     onSubmit({
-      coinId:        selectedCoin.coinId,
-      symbol:        selectedCoin.symbol,
-      name:          selectedCoin.name,
-      icon:          selectedCoin.icon || "◎",
-      units:         parseFloat(units),
+      coinId: selectedCoin.coinId,
+      symbol: selectedCoin.symbol,
+      name: selectedCoin.name,
+      icon: selectedCoin.icon || "◎",
+      units: parseFloat(units),
       purchasePrice: parseFloat(purchasePrice),
       purchaseDate,
       notes,
     });
   };
 
-  const totalCost = units && purchasePrice
-    ? parseFloat(units) * parseFloat(purchasePrice)
-    : null;
+  const totalCost =
+    units && purchasePrice
+      ? parseFloat(units) * parseFloat(purchasePrice)
+      : null;
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-
         {/* Coin search */}
         <div>
           <label className="text-[11px] text-slate-500 font-mono uppercase tracking-wider mb-1.5 block">
@@ -322,7 +375,8 @@ function HoldingForm({ initial = {}, onSubmit, onCancel, loading }) {
           />
           {coinError && (
             <p className="text-[10px] text-red-400 mt-1 font-mono flex items-center gap-1">
-              <AlertCircle size={9} />{coinError}
+              <AlertCircle size={9} />
+              {coinError}
             </p>
           )}
         </div>
@@ -333,7 +387,9 @@ function HoldingForm({ initial = {}, onSubmit, onCancel, loading }) {
             Units *
           </label>
           <input
-            type="number" step="any" min="0"
+            type="number"
+            step="any"
+            min="0"
             className="glass-input font-mono"
             placeholder="0.5"
             value={units}
@@ -348,9 +404,13 @@ function HoldingForm({ initial = {}, onSubmit, onCancel, loading }) {
             Buy Price (USD) *
           </label>
           <div className="relative">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-600 font-mono text-sm">$</span>
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-600 font-mono text-sm">
+              $
+            </span>
             <input
-              type="number" step="any" min="0"
+              type="number"
+              step="any"
+              min="0"
               className="glass-input font-mono pl-6"
               placeholder="65000"
               value={purchasePrice}
@@ -359,14 +419,17 @@ function HoldingForm({ initial = {}, onSubmit, onCancel, loading }) {
             />
           </div>
           {selectedCoin && !purchasePrice && (
-            <p className="text-[10px] text-slate-700 mt-1 font-mono">← auto-fills on coin select</p>
+            <p className="text-[10px] text-slate-700 mt-1 font-mono">
+              ← auto-fills on coin select
+            </p>
           )}
         </div>
 
         {/* Date */}
         <div>
           <label className="text-[11px] text-slate-500 font-mono uppercase tracking-wider mb-1.5 block">
-            <Calendar size={9} className="inline mr-1" />Date
+            <Calendar size={9} className="inline mr-1" />
+            Date
           </label>
           <input
             type="date"
@@ -380,7 +443,8 @@ function HoldingForm({ initial = {}, onSubmit, onCancel, loading }) {
       {/* Notes */}
       <div>
         <label className="text-[11px] text-slate-500 font-mono uppercase tracking-wider mb-1.5 block">
-          <FileText size={9} className="inline mr-1" />Notes (optional)
+          <FileText size={9} className="inline mr-1" />
+          Notes (optional)
         </label>
         <input
           className="glass-input"
@@ -394,10 +458,17 @@ function HoldingForm({ initial = {}, onSubmit, onCancel, loading }) {
       <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
         {selectedCoin && (
           <div className="flex items-center gap-2.5">
-            <CoinLogo icon={selectedCoin.icon} symbol={selectedCoin.symbol} size={22} />
+            <CoinLogo
+              icon={selectedCoin.icon}
+              symbol={selectedCoin.symbol}
+              size={22}
+            />
             <span className="text-xs font-mono text-slate-400">
-              <span className="text-white font-bold">{selectedCoin.symbol}</span>
-              {" · "}{selectedCoin.name}
+              <span className="text-white font-bold">
+                {selectedCoin.symbol}
+              </span>
+              {" · "}
+              {selectedCoin.name}
             </span>
           </div>
         )}
@@ -411,8 +482,16 @@ function HoldingForm({ initial = {}, onSubmit, onCancel, loading }) {
 
       <div className="flex gap-2">
         <button type="submit" className="btn-arc" disabled={loading}>
-          {loading ? <Loader2 size={13} className="animate-spin" /> : <Check size={13} />}
-          {loading ? "Saving…" : initial._id ? "Update Holding" : "Add to Portfolio"}
+          {loading ? (
+            <Loader2 size={13} className="animate-spin" />
+          ) : (
+            <Check size={13} />
+          )}
+          {loading
+            ? "Saving…"
+            : initial._id
+              ? "Update Holding"
+              : "Add to Portfolio"}
         </button>
         <button type="button" className="btn-ghost" onClick={onCancel}>
           <X size={13} /> Cancel
@@ -427,18 +506,28 @@ function SortBtn({ col, sort, setSort, children }) {
   const active = sort.col === col;
   return (
     <button
-      onClick={() => setSort((s) =>
-        s.col === col ? { col, dir: s.dir === "asc" ? "desc" : "asc" } : { col, dir: "desc" }
-      )}
+      onClick={() =>
+        setSort((s) =>
+          s.col === col
+            ? { col, dir: s.dir === "asc" ? "desc" : "asc" }
+            : { col, dir: "desc" },
+        )
+      }
       className={clsx(
         "flex items-center gap-1 font-mono text-[10px] uppercase tracking-wider whitespace-nowrap transition-colors",
-        active ? "text-[#00d4ff]" : "text-slate-600 hover:text-slate-400"
+        active ? "text-[#00d4ff]" : "text-slate-600 hover:text-slate-400",
       )}
     >
       {children}
-      {active
-        ? sort.dir === "desc" ? <ChevronDown size={10} /> : <ChevronUp size={10} />
-        : <ChevronsUpDown size={10} />}
+      {active ? (
+        sort.dir === "desc" ? (
+          <ChevronDown size={10} />
+        ) : (
+          <ChevronUp size={10} />
+        )
+      ) : (
+        <ChevronsUpDown size={10} />
+      )}
     </button>
   );
 }
@@ -451,18 +540,24 @@ function LotRow({ lot, currentPrice, onDelete, onEdit, onSell }) {
   const [sellPrice, setSellPrice] = useState(currentPrice || "");
 
   const handleSell = async () => {
-    const unitsStr = window.prompt(`Enter units to sell (max ${lot.units}):`, lot.units);
+    const unitsStr = window.prompt(
+      `Enter units to sell (max ${lot.units}):`,
+      lot.units,
+    );
     if (unitsStr === null) return;
     const units = parseFloat(unitsStr);
     if (isNaN(units) || units <= 0 || units > lot.units) {
-      alert('Invalid units');
+      alert("Invalid units");
       return;
     }
-    const priceStr = window.prompt('Enter sell price per unit (USD):', currentPrice || '');
+    const priceStr = window.prompt(
+      "Enter sell price per unit (USD):",
+      currentPrice || "",
+    );
     if (priceStr === null) return;
     const price = parseFloat(priceStr);
     if (isNaN(price) || price <= 0) {
-      alert('Invalid price');
+      alert("Invalid price");
       return;
     }
     setSelling(true);
@@ -470,17 +565,17 @@ function LotRow({ lot, currentPrice, onDelete, onEdit, onSell }) {
       await onSell(lot._id, units, price);
     } catch (e) {
       console.error(e);
-      alert(e.message || 'Error processing sell');
+      alert(e.message || "Error processing sell");
     } finally {
       setSelling(false);
     }
   };
 
   const [confirmDel, setConfirmDel] = useState(false);
-  const cost      = lot.units * lot.purchasePrice;
-  const value     = currentPrice != null ? lot.units * currentPrice : null;
+  const cost = lot.units * lot.purchasePrice;
+  const value = currentPrice != null ? lot.units * currentPrice : null;
   const pnlDollar = value != null ? value - cost : null;
-  const pnlPct    = currentPrice
+  const pnlPct = currentPrice
     ? ((currentPrice - lot.purchasePrice) / lot.purchasePrice) * 100
     : null;
 
@@ -492,30 +587,54 @@ function LotRow({ lot, currentPrice, onDelete, onEdit, onSell }) {
           <div>
             <p className="text-slate-500 text-xs font-mono">
               {new Date(lot.purchaseDate).toLocaleDateString("en-US", {
-                day: "2-digit", month: "short", year: "numeric",
+                day: "2-digit",
+                month: "short",
+                year: "numeric",
               })}
             </p>
             {lot.notes && (
-              <p className="text-slate-700 text-[10px] truncate max-w-[180px]">{lot.notes}</p>
+              <p className="text-slate-700 text-[10px] truncate max-w-[180px]">
+                {lot.notes}
+              </p>
             )}
           </div>
         </div>
       </td>
-      <td className="px-4 py-2.5 font-mono text-xs text-slate-500 text-right tabular-nums">{fmtUnits(lot.units)}</td>
-      <td className="px-4 py-2.5 font-mono text-xs text-slate-500 text-right tabular-nums">{fmt$(lot.purchasePrice)}</td>
+      <td className="px-4 py-2.5 font-mono text-xs text-slate-500 text-right tabular-nums">
+        {fmtUnits(lot.units)}
+      </td>
+      <td className="px-4 py-2.5 font-mono text-xs text-slate-500 text-right tabular-nums">
+        {fmt$(lot.purchasePrice)}
+      </td>
       <td className="px-4 py-2.5 font-mono text-xs text-slate-600 text-right tabular-nums">
         {currentPrice != null ? fmt$(currentPrice) : "—"}
       </td>
       <td className="px-4 py-2.5 font-mono text-xs text-slate-400 text-right tabular-nums">
         {value != null ? fmt$(value) : "—"}
       </td>
-      <td className={clsx("px-4 py-2.5 font-mono text-xs text-right tabular-nums font-semibold", pnlClass(pnlDollar))}>
-        {pnlDollar != null ? <>{pnlDollar >= 0 ? "+" : "-"}{fmt$(pnlDollar)}</> : "—"}
+      <td
+        className={clsx(
+          "px-4 py-2.5 font-mono text-xs text-right tabular-nums font-semibold",
+          pnlClass(pnlDollar),
+        )}
+      >
+        {pnlDollar != null ? (
+          <>
+            {pnlDollar >= 0 ? "+" : "-"}
+            {fmt$(pnlDollar)}
+          </>
+        ) : (
+          "—"
+        )}
       </td>
       <td className="px-4 py-2.5 text-right">
-        {pnlPct != null
-          ? <span className={clsx("text-[10px] font-mono", pnlClass(pnlPct))}>{fmtPct(pnlPct)}</span>
-          : "—"}
+        {pnlPct != null ? (
+          <span className={clsx("text-[10px] font-mono", pnlClass(pnlPct))}>
+            {fmtPct(pnlPct)}
+          </span>
+        ) : (
+          "—"
+        )}
       </td>
       <td className="px-4 py-2.5">
         <div className="flex gap-1 justify-center opacity-0 group-hover:opacity-100 transition-opacity">
@@ -525,18 +644,38 @@ function LotRow({ lot, currentPrice, onDelete, onEdit, onSell }) {
             className="p-1 rounded text-slate-600 hover:text-emerald-400 hover:bg-emerald-400/10 transition-colors disabled:opacity-50"
             title="Sell"
           >
-            {selling ? <Loader2 size={11} className="animate-spin" /> : <DollarSign size={11} />}
+            {selling ? (
+              <Loader2 size={11} className="animate-spin" />
+            ) : (
+              <DollarSign size={11} />
+            )}
           </button>
-          <button onClick={onEdit} className="p-1 rounded text-slate-600 hover:text-[#00d4ff] hover:bg-[rgba(0,212,255,0.08)] transition-colors">
+          <button
+            onClick={onEdit}
+            className="p-1 rounded text-slate-600 hover:text-[#00d4ff] hover:bg-[rgba(0,212,255,0.08)] transition-colors"
+          >
             <Pencil size={11} />
           </button>
           {confirmDel ? (
             <>
-              <button onClick={onDelete} className="p-1 rounded text-red-400 hover:bg-red-400/10"><Check size={11} /></button>
-              <button onClick={() => setConfirmDel(false)} className="p-1 rounded text-slate-600 hover:bg-white/5"><X size={11} /></button>
+              <button
+                onClick={onDelete}
+                className="p-1 rounded text-red-400 hover:bg-red-400/10"
+              >
+                <Check size={11} />
+              </button>
+              <button
+                onClick={() => setConfirmDel(false)}
+                className="p-1 rounded text-slate-600 hover:bg-white/5"
+              >
+                <X size={11} />
+              </button>
             </>
           ) : (
-            <button onClick={() => setConfirmDel(true)} className="p-1 rounded text-slate-600 hover:text-red-400 hover:bg-red-400/10 transition-colors">
+            <button
+              onClick={() => setConfirmDel(true)}
+              className="p-1 rounded text-slate-600 hover:text-red-400 hover:bg-red-400/10 transition-colors"
+            >
               <Trash2 size={11} />
             </button>
           )}
@@ -547,23 +686,33 @@ function LotRow({ lot, currentPrice, onDelete, onEdit, onSell }) {
 }
 
 // ── Aggregated coin row ───────────────────────────────────────────────────────
-function CoinRow({ coin, priceData, onDeleteLot, onEditLot, onSellLot, editingId, setEditingId }) {
+function CoinRow({
+  coin,
+  priceData,
+  onDeleteLot,
+  onEditLot,
+  onSellLot,
+  editingId,
+  setEditingId,
+}) {
   const [expanded, setExpanded] = useState(false);
 
   // Use enriched price data from the portfolio/prices endpoint
-  const liveData     = priceData || null;
+  const liveData = priceData || null;
   const currentPrice = liveData?.price ?? null;
   // Prefer live logo from CoinGecko's /coins/markets; fall back to stored icon
-  const displayIcon  = liveData?.thumb || coin.icon;
+  const displayIcon = liveData?.thumb || coin.icon;
 
-  const totalUnits   = coin.lots.reduce((s, l) => s + l.units, 0);
-  const totalCost    = coin.lots.reduce((s, l) => s + l.units * l.purchasePrice, 0);
-  const avgPrice     = totalCost / totalUnits;
+  const totalUnits = coin.lots.reduce((s, l) => s + l.units, 0);
+  const totalCost = coin.lots.reduce(
+    (s, l) => s + l.units * l.purchasePrice,
+    0,
+  );
+  const avgPrice = totalCost / totalUnits;
   const currentValue = currentPrice != null ? totalUnits * currentPrice : null;
-  const pnlDollar    = currentValue != null ? currentValue - totalCost : null;
-  const pnlPct       = currentPrice != null
-    ? ((currentPrice - avgPrice) / avgPrice) * 100
-    : null;
+  const pnlDollar = currentValue != null ? currentValue - totalCost : null;
+  const pnlPct =
+    currentPrice != null ? ((currentPrice - avgPrice) / avgPrice) * 100 : null;
 
   return (
     <>
@@ -576,8 +725,12 @@ function CoinRow({ coin, priceData, onDeleteLot, onEditLot, onSellLot, editingId
           <div className="flex items-center gap-3">
             <CoinLogo icon={displayIcon} symbol={coin.symbol} size={32} />
             <div>
-              <p className="text-white font-mono font-bold text-sm leading-none">{coin.symbol}</p>
-              <p className="text-slate-600 text-[10px] mt-0.5 truncate max-w-[100px]">{coin.name}</p>
+              <p className="text-white font-mono font-bold text-sm leading-none">
+                {coin.symbol}
+              </p>
+              <p className="text-slate-600 text-[10px] mt-0.5 truncate max-w-[100px]">
+                {coin.name}
+              </p>
             </div>
             {coin.lots.length > 1 && (
               <span className="text-[9px] font-mono px-1.5 py-0.5 rounded-full bg-white/5 border border-white/8 text-slate-600">
@@ -594,21 +747,48 @@ function CoinRow({ coin, priceData, onDeleteLot, onEditLot, onSellLot, editingId
           {fmt$(avgPrice)}
         </td>
         <td className="px-4 py-3.5 font-mono text-sm text-white text-right tabular-nums">
-          {currentPrice != null ? fmt$(currentPrice) : <span className="text-slate-700">—</span>}
+          {currentPrice != null ? (
+            fmt$(currentPrice)
+          ) : (
+            <span className="text-slate-700">—</span>
+          )}
         </td>
         <td className="px-4 py-3.5 font-mono text-sm text-white font-bold text-right tabular-nums">
           {currentValue != null ? fmt$(currentValue) : "—"}
         </td>
-        <td className={clsx("px-4 py-3.5 font-mono text-sm text-right tabular-nums font-bold", pnlClass(pnlDollar))}>
-          {pnlDollar != null ? <>{pnlDollar >= 0 ? "+" : "-"}{fmt$(pnlDollar)}</> : "—"}
+        <td
+          className={clsx(
+            "px-4 py-3.5 font-mono text-sm text-right tabular-nums font-bold",
+            pnlClass(pnlDollar),
+          )}
+        >
+          {pnlDollar != null ? (
+            <>
+              {pnlDollar >= 0 ? "+" : "-"}
+              {fmt$(pnlDollar)}
+            </>
+          ) : (
+            "—"
+          )}
         </td>
         <td className="px-4 py-3.5 text-right">
           {pnlPct != null ? (
-            <span className={clsx("inline-flex items-center gap-1 text-xs font-mono px-2 py-1 rounded-full", pnlBg(pnlPct))}>
-              {pnlPct >= 0 ? <TrendingUp size={9} /> : <TrendingDown size={9} />}
+            <span
+              className={clsx(
+                "inline-flex items-center gap-1 text-xs font-mono px-2 py-1 rounded-full",
+                pnlBg(pnlPct),
+              )}
+            >
+              {pnlPct >= 0 ? (
+                <TrendingUp size={9} />
+              ) : (
+                <TrendingDown size={9} />
+              )}
               {fmtPct(pnlPct)}
             </span>
-          ) : "—"}
+          ) : (
+            "—"
+          )}
         </td>
         <td className="px-4 py-3.5 text-center">
           <span className="text-slate-700">
@@ -618,43 +798,48 @@ function CoinRow({ coin, priceData, onDeleteLot, onEditLot, onSellLot, editingId
       </tr>
 
       {/* Expanded lots */}
-      {expanded && coin.lots.map((lot) =>
-        editingId === lot._id ? (
-          <tr key={lot._id} className="bg-[rgba(0,212,255,0.02)] border-b border-white/[0.04]">
-            <td colSpan={8} className="px-4 py-4">
-              <HoldingForm
-                initial={lot}
-                onSubmit={(data) => onEditLot(lot._id, data)}
-                onCancel={() => setEditingId(null)}
-                loading={false}
-              />
-            </td>
-          </tr>
-        ) : (
-          <LotRow
-            key={lot._id}
-            lot={lot}
-            currentPrice={currentPrice}
-            onDelete={() => onDeleteLot(lot._id)}
-            onEdit={() => setEditingId(lot._id)}
-            onSell={onSellLot}
-          />
-        )
-      )}
+      {expanded &&
+        coin.lots.map((lot) =>
+          editingId === lot._id ? (
+            <tr
+              key={lot._id}
+              className="bg-[rgba(0,212,255,0.02)] border-b border-white/[0.04]"
+            >
+              <td colSpan={8} className="px-4 py-4">
+                <HoldingForm
+                  initial={lot}
+                  onSubmit={(data) => onEditLot(lot._id, data)}
+                  onCancel={() => setEditingId(null)}
+                  loading={false}
+                />
+              </td>
+            </tr>
+          ) : (
+            <LotRow
+              key={lot._id}
+              lot={lot}
+              currentPrice={currentPrice}
+              onDelete={() => onDeleteLot(lot._id)}
+              onEdit={() => setEditingId(lot._id)}
+              onSell={onSellLot}
+            />
+          ),
+        )}
     </>
   );
 }
 
 // ── Main Portfolio ────────────────────────────────────────────────────────────
 export default function Portfolio() {
-  const [showForm,        setShowForm]        = useState(false);
-  const [adding,          setAdding]          = useState(false);
-  const [editingId,       setEditingId]       = useState(null);
-  const [sort,            setSort]            = useState({ col: "value", dir: "desc" });
+  const [showForm, setShowForm] = useState(false);
+  const [adding, setAdding] = useState(false);
+  const [editingId, setEditingId] = useState(null);
+  const [sort, setSort] = useState({ col: "value", dir: "desc" });
   const [totalAssetInput, setTotalAssetInput] = useState("");
 
   // Holdings from MongoDB
-  const { data: holdingsData, mutate: mutateHoldings } = useSWR("/api/portfolio");
+  const { data: holdingsData, mutate: mutateHoldings } =
+    useSWR("/api/portfolio");
   const holdings = holdingsData?.data || [];
 
   // Cash asset stored on the user record
@@ -676,14 +861,21 @@ export default function Portfolio() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ totalAsset: nextAsset }),
       });
-      mutateAsset({ success: true, data: { totalAsset: nextAsset } }, { revalidate: false });
+      mutateAsset(
+        { success: true, data: { totalAsset: nextAsset } },
+        { revalidate: false },
+      );
     }, 600);
 
     return () => clearTimeout(timeout);
   }, [mutateAsset, serverAsset, totalAssetInput]);
 
-  const { data: tradesData, mutate: mutateTrades } = useSWR("/api/portfolio/trades");
-  const sellHistory = (tradesData?.data || []).filter((trade) => trade.setup === "portfolio-sell" || trade.setup === "sell");
+  const { data: tradesData, mutate: mutateTrades } = useSWR(
+    "/api/portfolio/trades",
+  );
+  const sellHistory = (tradesData?.data || []).filter(
+    (trade) => trade.setup === "portfolio-sell" || trade.setup === "sell",
+  );
 
   // Live prices for exactly the coins in this user's portfolio
   const {
@@ -691,12 +883,12 @@ export default function Portfolio() {
     isLoading: pricesLoading,
     mutate: mutatePrices,
   } = useSWR("/api/portfolio/prices", {
-    refreshInterval:      120_000,
-    revalidateOnFocus:    false,
+    refreshInterval: 120_000,
+    revalidateOnFocus: false,
     revalidateOnReconnect: false,
   });
 
-  const prices = priceData?.prices || {};  // { [coinId]: { price, change24h, name, symbol, thumb } }
+  const prices = priceData?.prices || {}; // { [coinId]: { price, change24h, name, symbol, thumb } }
 
   // Aggregate holdings by coin
   const aggregated = useMemo(() => {
@@ -706,9 +898,9 @@ export default function Portfolio() {
         map[lot.coinId] = {
           coinId: lot.coinId,
           symbol: lot.symbol,
-          name:   lot.name,
-          icon:   lot.icon,
-          lots:   [],
+          name: lot.name,
+          icon: lot.icon,
+          lots: [],
         };
       }
       map[lot.coinId].lots.push(lot);
@@ -718,26 +910,34 @@ export default function Portfolio() {
 
   // Summary stats
   const stats = useMemo(() => {
-    let totalInvested = 0, totalValue = 0;
-    let bestPct = -Infinity, bestSymbol = "—";
+    let totalInvested = 0,
+      totalValue = 0;
+    let bestPct = -Infinity,
+      bestSymbol = "—";
 
     aggregated.forEach((coin) => {
-      const costSum  = coin.lots.reduce((s, l) => s + l.units * l.purchasePrice, 0);
+      const costSum = coin.lots.reduce(
+        (s, l) => s + l.units * l.purchasePrice,
+        0,
+      );
       const unitsSum = coin.lots.reduce((s, l) => s + l.units, 0);
-      const liveP    = prices[coin.coinId]?.price;
-      const val      = liveP != null ? unitsSum * liveP : 0;
+      const liveP = prices[coin.coinId]?.price;
+      const val = liveP != null ? unitsSum * liveP : 0;
 
       totalInvested += costSum;
-      totalValue    += val;
+      totalValue += val;
 
       if (liveP != null) {
         const avgP = costSum / unitsSum;
-        const pct  = ((liveP - avgP) / avgP) * 100;
-        if (pct > bestPct) { bestPct = pct; bestSymbol = coin.symbol; }
+        const pct = ((liveP - avgP) / avgP) * 100;
+        if (pct > bestPct) {
+          bestPct = pct;
+          bestSymbol = coin.symbol;
+        }
       }
     });
 
-    const pnl    = totalValue - totalInvested;
+    const pnl = totalValue - totalInvested;
     const pnlPct = totalInvested ? (pnl / totalInvested) * 100 : 0;
     return { totalInvested, totalValue, pnl, pnlPct, bestSymbol, bestPct };
   }, [aggregated, prices]);
@@ -747,15 +947,22 @@ export default function Portfolio() {
     return [...aggregated].sort((a, b) => {
       const getV = (c) => {
         const units = c.lots.reduce((s, l) => s + l.units, 0);
-        const cost  = c.lots.reduce((s, l) => s + l.units * l.purchasePrice, 0);
+        const cost = c.lots.reduce((s, l) => s + l.units * l.purchasePrice, 0);
         const liveP = prices[c.coinId]?.price;
-        const val   = liveP != null ? units * liveP : 0;
-        const pnl   = val - cost;
-        const pct   = liveP != null ? ((liveP - cost / units) / (cost / units)) * 100 : 0;
+        const val = liveP != null ? units * liveP : 0;
+        const pnl = val - cost;
+        const pct =
+          liveP != null ? ((liveP - cost / units) / (cost / units)) * 100 : 0;
         return { units, value: val, pnl, pct };
       };
-      const av = getV(a), bv = getV(b);
-      const cm = { units: [av.units, bv.units], value: [av.value, bv.value], pnl: [av.pnl, bv.pnl], pct: [av.pct, bv.pct] };
+      const av = getV(a),
+        bv = getV(b);
+      const cm = {
+        units: [av.units, bv.units],
+        value: [av.value, bv.value],
+        pnl: [av.pnl, bv.pnl],
+        pct: [av.pct, bv.pct],
+      };
       const [va, vb] = cm[sort.col] || [0, 0];
       return sort.dir === "desc" ? vb - va : va - vb;
     });
@@ -771,7 +978,7 @@ export default function Portfolio() {
         body: JSON.stringify(formData),
       });
       await mutateHoldings();
-      await mutatePrices();   // refresh prices to include the new coin
+      await mutatePrices(); // refresh prices to include the new coin
       await mutateAsset();
       setShowForm(false);
     } finally {
@@ -780,7 +987,10 @@ export default function Portfolio() {
   };
 
   const handleDelete = async (id) => {
-    mutateHoldings({ data: holdings.filter((h) => h._id !== id) }, { revalidate: false });
+    mutateHoldings(
+      { data: holdings.filter((h) => h._id !== id) },
+      { revalidate: false },
+    );
     await fetch(`/api/portfolio/${id}`, { method: "DELETE" });
     mutateHoldings();
     mutatePrices();
@@ -812,19 +1022,23 @@ export default function Portfolio() {
     mutateHoldings();
   };
 
-  const coinsWithoutPrice = aggregated.filter((c) => prices[c.coinId]?.price == null).map((c) => c.symbol);
+  const coinsWithoutPrice = aggregated
+    .filter((c) => prices[c.coinId]?.price == null)
+    .map((c) => c.symbol);
   const totalAsset = Number(totalAssetInput) || 0;
 
   return (
     <div className="space-y-6">
-
       {/* ── Header ──────────────────────────────────────────────────── */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <Wallet size={18} className="text-[#00d4ff]" />
-          <h2 className="font-display text-3xl tracking-wider text-white">MY PORTFOLIO</h2>
+          <h2 className="font-display text-3xl tracking-wider text-white">
+            MY PORTFOLIO
+          </h2>
           <span className="text-xs font-mono text-slate-600 bg-white/5 px-2 py-0.5 rounded-full border border-white/8">
-            {aggregated.length} coin{aggregated.length !== 1 ? "s" : ""} · {holdings.length} lot{holdings.length !== 1 ? "s" : ""}
+            {aggregated.length} coin{aggregated.length !== 1 ? "s" : ""} ·{" "}
+            {holdings.length} lot{holdings.length !== 1 ? "s" : ""}
           </span>
         </div>
         <div className="flex items-center gap-2">
@@ -833,7 +1047,10 @@ export default function Portfolio() {
             className="btn-ghost text-xs"
             title="Refresh prices"
           >
-            <RefreshCw size={12} className={pricesLoading ? "animate-spin" : ""} />
+            <RefreshCw
+              size={12}
+              className={pricesLoading ? "animate-spin" : ""}
+            />
           </button>
           <button className="btn-arc" onClick={() => setShowForm((v) => !v)}>
             {showForm ? <X size={13} /> : <Plus size={13} />}
@@ -853,11 +1070,20 @@ export default function Portfolio() {
       />
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <StatCard label="Total Invested" icon={DollarSign} color="arc"
+        <StatCard
+          label="Total Invested"
+          icon={DollarSign}
+          color="arc"
           value={fmt$(stats.totalInvested)}
-          sub={`${holdings.length} purchase${holdings.length !== 1 ? "s" : ""}`} />
-        <StatCard label="Current Value" icon={BarChart3} color="ember"
-          value={fmt$(stats.totalValue)} sub="Live prices" />
+          sub={`${holdings.length} purchase${holdings.length !== 1 ? "s" : ""}`}
+        />
+        <StatCard
+          label="Current Value"
+          icon={BarChart3}
+          color="ember"
+          value={fmt$(stats.totalValue)}
+          sub="Live prices"
+        />
         <StatCard
           label="Total P&L"
           icon={stats.pnl >= 0 ? TrendingUp : TrendingDown}
@@ -865,9 +1091,17 @@ export default function Portfolio() {
           value={`${stats.pnl >= 0 ? "+" : ""}${fmt$(stats.pnl)}`}
           trend={stats.pnlPct}
         />
-        <StatCard label="Best Performer" icon={Award} color="arc"
+        <StatCard
+          label="Best Performer"
+          icon={Award}
+          color="arc"
           value={stats.bestSymbol}
-          sub={stats.bestPct > -Infinity ? fmtPct(stats.bestPct) : "Add coins to track"} />
+          sub={
+            stats.bestPct > -Infinity
+              ? fmtPct(stats.bestPct)
+              : "Add coins to track"
+          }
+        />
       </div>
 
       {/* ── Add form ─────────────────────────────────────────────────── */}
@@ -876,7 +1110,11 @@ export default function Portfolio() {
           <p className="text-[11px] text-slate-500 font-mono uppercase tracking-wider mb-4">
             New Holding — Search any of 14,000+ coins
           </p>
-          <HoldingForm onSubmit={handleAdd} onCancel={() => setShowForm(false)} loading={adding} />
+          <HoldingForm
+            onSubmit={handleAdd}
+            onCancel={() => setShowForm(false)}
+            loading={adding}
+          />
         </div>
       )}
 
@@ -884,9 +1122,17 @@ export default function Portfolio() {
       {coinsWithoutPrice.length > 0 && !pricesLoading && (
         <div className="glass-card border-amber-500/20 px-4 py-2.5 flex items-center gap-2 text-xs text-amber-400/80">
           <AlertCircle size={12} className="shrink-0 text-amber-400" />
-          Prices not yet loaded for: <span className="font-mono text-amber-400">{coinsWithoutPrice.join(", ")}</span>
+          Prices not yet loaded for:{" "}
+          <span className="font-mono text-amber-400">
+            {coinsWithoutPrice.join(", ")}
+          </span>
           &nbsp;—&nbsp;
-          <button onClick={() => mutatePrices()} className="underline hover:text-amber-300">retry</button>
+          <button
+            onClick={() => mutatePrices()}
+            className="underline hover:text-amber-300"
+          >
+            retry
+          </button>
         </div>
       )}
 
@@ -896,9 +1142,13 @@ export default function Portfolio() {
           <Wallet size={40} className="mx-auto text-slate-800" />
           <p className="text-slate-500 text-sm">No holdings yet.</p>
           <p className="text-slate-700 text-xs">
-            Search and add any crypto — Bitcoin, Ethereum, PEPE, and 14,000+ more.
+            Search and add any crypto — Bitcoin, Ethereum, PEPE, and 14,000+
+            more.
           </p>
-          <button className="btn-arc mx-auto mt-2" onClick={() => setShowForm(true)}>
+          <button
+            className="btn-arc mx-auto mt-2"
+            onClick={() => setShowForm(true)}
+          >
             <Plus size={13} /> Add Your First Coin
           </button>
         </div>
@@ -909,20 +1159,30 @@ export default function Portfolio() {
               <thead>
                 <tr className="border-b border-white/[0.06]">
                   {[
-                    { label: "Coin",          col: null,    align: "left"   },
-                    { label: "Units",         col: "units", align: "right"  },
-                    { label: "Avg Buy Price", col: null,    align: "right"  },
-                    { label: "Current Price", col: null,    align: "right"  },
-                    { label: "Value",         col: "value", align: "right"  },
-                    { label: "P&L ($)",       col: "pnl",   align: "right"  },
-                    { label: "P&L (%)",       col: "pct",   align: "right"  },
-                    { label: "",              col: null,    align: "center" },
+                    { label: "Coin", col: null, align: "left" },
+                    { label: "Units", col: "units", align: "right" },
+                    { label: "Avg Buy Price", col: null, align: "right" },
+                    { label: "Current Price", col: null, align: "right" },
+                    { label: "Value", col: "value", align: "right" },
+                    { label: "P&L ($)", col: "pnl", align: "right" },
+                    { label: "P&L (%)", col: "pct", align: "right" },
+                    { label: "", col: null, align: "center" },
                   ].map(({ label, col, align }, i) => (
-                    <th key={i} className={clsx("px-4 py-3 bg-white/[0.02]", `text-${align}`)}>
+                    <th
+                      key={i}
+                      className={clsx(
+                        "px-4 py-3 bg-white/[0.02]",
+                        `text-${align}`,
+                      )}
+                    >
                       {col ? (
-                        <SortBtn col={col} sort={sort} setSort={setSort}>{label}</SortBtn>
+                        <SortBtn col={col} sort={sort} setSort={setSort}>
+                          {label}
+                        </SortBtn>
                       ) : (
-                        <span className="font-mono text-[10px] uppercase tracking-wider text-slate-600">{label}</span>
+                        <span className="font-mono text-[10px] uppercase tracking-wider text-slate-600">
+                          {label}
+                        </span>
                       )}
                     </th>
                   ))}
@@ -944,18 +1204,36 @@ export default function Portfolio() {
               </tbody>
               <tfoot>
                 <tr className="border-t border-white/10 bg-white/[0.02]">
-                  <td colSpan={4} className="px-4 py-3 text-slate-500 font-mono text-xs uppercase tracking-wider">
+                  <td
+                    colSpan={4}
+                    className="px-4 py-3 text-slate-500 font-mono text-xs uppercase tracking-wider"
+                  >
                     Portfolio Total
                   </td>
                   <td className="px-4 py-3 font-mono font-bold text-white text-right tabular-nums">
                     {fmt$(stats.totalValue)}
                   </td>
-                  <td className={clsx("px-4 py-3 font-mono font-bold text-right tabular-nums", pnlClass(stats.pnl))}>
-                    {stats.pnl >= 0 ? "+" : "-"}{fmt$(stats.pnl)}
+                  <td
+                    className={clsx(
+                      "px-4 py-3 font-mono font-bold text-right tabular-nums",
+                      pnlClass(stats.pnl),
+                    )}
+                  >
+                    {stats.pnl >= 0 ? "+" : "-"}
+                    {fmt$(stats.pnl)}
                   </td>
                   <td className="px-4 py-3 text-right">
-                    <span className={clsx("inline-flex items-center gap-1 text-sm font-mono font-bold px-2.5 py-1 rounded-full", pnlBg(stats.pnlPct))}>
-                      {stats.pnlPct >= 0 ? <TrendingUp size={11} /> : <TrendingDown size={11} />}
+                    <span
+                      className={clsx(
+                        "inline-flex items-center gap-1 text-sm font-mono font-bold px-2.5 py-1 rounded-full",
+                        pnlBg(stats.pnlPct),
+                      )}
+                    >
+                      {stats.pnlPct >= 0 ? (
+                        <TrendingUp size={11} />
+                      ) : (
+                        <TrendingDown size={11} />
+                      )}
                       {fmtPct(stats.pnlPct)}
                     </span>
                   </td>
@@ -972,7 +1250,9 @@ export default function Portfolio() {
           <div className="flex items-center justify-between border-b border-white/[0.06] px-4 py-3">
             <div className="flex items-center gap-2">
               <FileText size={14} className="text-[#00d4ff]" />
-              <h3 className="font-display text-xl tracking-wider text-white">SELL HISTORY</h3>
+              <h3 className="font-display text-xl tracking-wider text-white">
+                SELL HISTORY
+              </h3>
             </div>
             <span className="text-[10px] font-mono uppercase tracking-wider text-slate-600">
               {sellHistory.length} sale{sellHistory.length !== 1 ? "s" : ""}
@@ -982,26 +1262,52 @@ export default function Portfolio() {
             <table className="w-full min-w-[720px]">
               <thead>
                 <tr className="border-b border-white/[0.06]">
-                  {["Date", "Coin", "Units", "Buy", "Sell", "Received", "Profit / Loss"].map((label) => (
-                    <th key={label} className="px-4 py-3 text-right first:text-left bg-white/[0.02]">
-                      <span className="font-mono text-[10px] uppercase tracking-wider text-slate-600">{label}</span>
+                  {[
+                    "Date",
+                    "Coin",
+                    "Units",
+                    "Buy",
+                    "Sell",
+                    "Received",
+                    "Profit / Loss",
+                  ].map((label) => (
+                    <th
+                      key={label}
+                      className="px-4 py-3 text-right first:text-left bg-white/[0.02]"
+                    >
+                      <span className="font-mono text-[10px] uppercase tracking-wider text-slate-600">
+                        {label}
+                      </span>
                     </th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {sellHistory.map((trade) => {
-                  const units = trade.tags?.find((tag) => tag.startsWith("units:"))?.split(":")[1];
-                  const buyPrice = trade.tags?.find((tag) => tag.startsWith("buy:"))?.split(":")[1];
+                  const units = trade.tags
+                    ?.find((tag) => tag.startsWith("units:"))
+                    ?.split(":")[1];
+                  const buyPrice = trade.tags
+                    ?.find((tag) => tag.startsWith("buy:"))
+                    ?.split(":")[1];
 
                   return (
-                    <tr key={trade._id} className="border-b border-white/[0.04] hover:bg-white/[0.025] transition-colors">
+                    <tr
+                      key={trade._id}
+                      className="border-b border-white/[0.04] hover:bg-white/[0.025] transition-colors"
+                    >
                       <td className="px-4 py-3 font-mono text-xs text-slate-500">
-                        {new Date(trade.tradeDate || trade.createdAt).toLocaleDateString("en-US", {
-                          day: "2-digit", month: "short", year: "numeric",
+                        {new Date(
+                          trade.tradeDate || trade.createdAt,
+                        ).toLocaleDateString("en-US", {
+                          day: "2-digit",
+                          month: "short",
+                          year: "numeric",
                         })}
                       </td>
-                      <td className="px-4 py-3 font-mono text-xs text-white text-right">{trade.coin}</td>
+                      <td className="px-4 py-3 font-mono text-xs text-white text-right">
+                        {trade.coin}
+                      </td>
                       <td className="px-4 py-3 font-mono text-xs text-slate-400 text-right tabular-nums">
                         {units ? fmtUnits(Number(units)) : "—"}
                       </td>
@@ -1009,15 +1315,25 @@ export default function Portfolio() {
                         {buyPrice ? fmt$(Number(buyPrice)) : "—"}
                       </td>
                       <td className="px-4 py-3 font-mono text-xs text-slate-400 text-right tabular-nums">
-                        {trade.exitPrice != null ? fmt$(trade.exitPrice) : fmt$(trade.entryPrice)}
+                        {trade.exitPrice != null
+                          ? fmt$(trade.exitPrice)
+                          : fmt$(trade.entryPrice)}
                       </td>
                       <td className="px-4 py-3 font-mono text-xs text-white text-right tabular-nums">
                         {fmt$(trade.tradeAmount)}
                       </td>
-                      <td className={clsx("px-4 py-3 font-mono text-xs font-bold text-right tabular-nums", pnlClass(trade.netPnl))}>
-                        {trade.netPnl >= 0 ? "+" : "-"}{fmt$(trade.netPnl)}
+                      <td
+                        className={clsx(
+                          "px-4 py-3 font-mono text-xs font-bold text-right tabular-nums",
+                          pnlClass(trade.netPnl),
+                        )}
+                      >
+                        {trade.netPnl >= 0 ? "+" : "-"}
+                        {fmt$(trade.netPnl)}
                         {trade.netPnlPercent != null && (
-                          <span className="ml-2 text-[10px] font-normal opacity-70">{fmtPct(trade.netPnlPercent)}</span>
+                          <span className="ml-2 text-[10px] font-normal opacity-70">
+                            {fmtPct(trade.netPnlPercent)}
+                          </span>
                         )}
                       </td>
                     </tr>
@@ -1032,7 +1348,9 @@ export default function Portfolio() {
       {/* Footer */}
       {priceData?.timestamp && (
         <p className="text-[10px] text-slate-700 font-mono text-right">
-          Prices via CoinGecko · {new Date(priceData.timestamp).toLocaleTimeString()} · Not financial advice.
+          Prices via CoinGecko ·{" "}
+          {new Date(priceData.timestamp).toLocaleTimeString()} · Not financial
+          advice.
         </p>
       )}
     </div>
