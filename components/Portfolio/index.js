@@ -446,6 +446,9 @@ function SortBtn({ col, sort, setSort, children }) {
 // ── Individual lot row (inside expanded coin) ─────────────────────────────────
 function LotRow({ lot, currentPrice, onDelete, onEdit, onSell }) {
   const [selling, setSelling] = useState(false);
+  const [showSellModal, setShowSellModal] = useState(false);
+  const [sellUnits, setSellUnits] = useState(lot.units);
+  const [sellPrice, setSellPrice] = useState(currentPrice || "");
 
   const handleSell = async () => {
     const unitsStr = window.prompt(`Enter units to sell (max ${lot.units}):`, lot.units);
