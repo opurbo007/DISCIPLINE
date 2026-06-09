@@ -445,6 +445,46 @@ function SortBtn({ col, sort, setSort, children }) {
 
 // ── Individual lot row (inside expanded coin) ─────────────────────────────────
 function LotRow({ lot, currentPrice, onDelete, onEdit }) {
+  const [selling, setSelling] = useState(false);
+
+  const handleSell = async () => {
+    const unitsStr = window.prompt(`Enter units to sell (max ${lot.units}):`, lot.units);
+    if (unitsStr === null) return;
+    const units = parseFloat(unitsStr);
+    if (isNaN(units) || units <= 0 || units > lot.units) {
+      alert('Invalid units');
+      return;
+    }
+    const priceStr = window.prompt('Enter sell price per unit (USD):', currentPrice || '');
+    if (priceStr === null) return;
+    const price = parseFloat(priceStr);
+    if (isNaN(price) || price <= 0) {
+      alert('Invalid price');
+      return;
+    }
+    setSelling(true);
+    try {
+      const res = await fetch('/api/portfolio/sell', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ holdingId: lot._id, units, sellPrice: price }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        // Refresh holdings by calling parent mutator via event (could use custom event)
+        // For simplicity, reload page
+        window.location.reload();
+      } else {
+        alert(data.error || 'Sell failed');
+      }
+    } catch (e) {
+      console.error(e);
+      alert('Error processing sell');
+    } finally {
+      setSelling(false);
+    }
+  };
+
   const [confirmDel, setConfirmDel] = useState(false);
   const cost      = lot.units * lot.purchasePrice;
   const value     = currentPrice != null ? lot.units * currentPrice : null;

@@ -11,6 +11,7 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/pages/api/auth/[...nextauth]";
 import dbConnect from "@/lib/mongodb";
 import Holding from "@/lib/models/Holding";
+import User from "@/lib/models/User";
 
 export default async function handler(req, res) {
   // ── Auth guard ────────────────────────────────────────────────────────────
@@ -58,7 +59,9 @@ export default async function handler(req, res) {
         notes: notes || "",
       });
 
-      return res.status(201).json({ success: true, data: holding });
+      // Adjust user's cash asset after buying
+await User.updateOne({ _id: userId }, { $inc: { totalAsset: - (parseFloat(purchasePrice) * parseFloat(units)) } });
+return res.status(201).json({ success: true, data: holding });
     } catch (err) {
       if (err.name === "ValidationError") {
         const messages = Object.values(err.errors).map((e) => e.message);
