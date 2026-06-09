@@ -36,8 +36,14 @@ export default async function handler(req, res) {
   }
 
   const { holdingId, units, sellPrice, sellDate } = req.body;
-  if (!holdingId || !units || !sellPrice) {
+  const sellUnits = Number(units);
+  const price = Number(sellPrice);
+
+  if (!holdingId || !Number.isFinite(sellUnits) || !Number.isFinite(price)) {
     return res.status(400).json({ success: false, error: "holdingId, units and sellPrice are required" });
+  }
+  if (sellUnits <= 0 || price <= 0) {
+    return res.status(400).json({ success: false, error: "Sell units and price must be greater than zero" });
   }
 
   await dbConnect();
@@ -49,41 +55,50 @@ export default async function handler(req, res) {
     if (!holding) {
       return res.status(404).json({ success: false, error: "Holding not found" });
     }
-    if (units > holding.units) {
+    if (sellUnits > holding.units) {
       return res.status(400).json({ success: false, error: "Sell units exceed holding units" });
     }
 
     // Calculate profit/loss for the sold portion
     const purchasePrice = holding.purchasePrice; // price per unit at purchase
-    const pnl = (sellPrice - purchasePrice) * units; // positive = profit
-    const tradeAmount = sellPrice * units; // total USD received
+    const pnl = (price - purchasePrice) * sellUnits; // positive = profit
+    const tradeAmount = price * sellUnits; // total USD received
+    const remainingUnits = holding.units - sellUnits;
 
     // Create a Trade entry to log the sell
     const trade = await Trade.create({
       userId,
-      coin: holding.coinId,
-      direction: "LONG", // Using LONG to represent a sell trade; profit/loss is derived from netPnl
-      setup: "sell",
+      coin: holding.symbol,
+      direction: "LONG",
+      setup: "portfolio-sell",
       tradeAmount,
       leverage: 1,
-      entryPrice: sellPrice,
+      entryPrice: purchasePrice,
       stopLoss: null,
       takeProfit: null,
+      exitPrice: price,
       netPnl: pnl,
+      status: "CLOSED",
+      closedAt: sellDate ? new Date(sellDate) : new Date(),
+      outcome: `Sold ${sellUnits} ${holding.symbol} from portfolio`,
+      tags: [`holding:${holdingId}`, `units:${sellUnits}`, `buy:${purchasePrice}`, "portfolio"],
       tradeDate: sellDate ? new Date(sellDate) : new Date(),
     });
     // Adjust user's cash asset after selling
-    await User.updateOne({ _id: userId }, { $inc: { totalAsset: (sellPrice * units) } });
+    await User.updateOne({ _id: userId }, { $inc: { totalAsset: tradeAmount } });
 
     // Update or delete the holding
-    if (units === holding.units) {
+    if (remainingUnits <= 0) {
       await Holding.deleteOne({ _id: holdingId });
     } else {
-      holding.units = holding.units - units;
+      holding.units = remainingUnits;
       await holding.save();
     }
 
-    return res.status(200).json({ success: true, data: { trade, remainingHolding: units === holding.units ? null : holding } });
+    return res.status(200).json({
+      success: true,
+      data: { trade, remainingHolding: remainingUnits <= 0 ? null : holding },
+    });
   } catch (err) {
     console.error("[POST /api/portfolio/sell]", err);
     return res.status(500).json({ success: false, error: "Failed to process sell" });

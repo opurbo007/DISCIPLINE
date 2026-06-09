@@ -126,17 +126,18 @@ function AssetAllocationPanel({
   totalValue,
   pnl,
 }) {
-  const boughtPct = totalAsset > 0 ? (totalInvested / totalAsset) * 100 : 0;
-  const left = totalAsset > 0 ? totalAsset - totalInvested : 0;
-  const leftPct = totalAsset > 0 ? (left / totalAsset) * 100 : 0;
-  const pnlOfTotalPct = totalAsset > 0 ? (pnl / totalAsset) * 100 : 0;
-  const currentAssetValue = totalAsset > 0 ? left + totalValue : totalValue;
-  const overAllocated = left < 0;
+  const startingAsset = totalAsset + totalInvested;
+  const boughtPct = startingAsset > 0 ? (totalInvested / startingAsset) * 100 : 0;
+  const left = totalAsset;
+  const leftPct = startingAsset > 0 ? (left / startingAsset) * 100 : 0;
+  const pnlOfTotalPct = startingAsset > 0 ? (pnl / startingAsset) * 100 : 0;
+  const currentAssetValue = totalAsset + totalValue;
+  const overAllocated = totalAsset < 0;
 
-  const investedWidth = totalAsset > 0
+  const investedWidth = startingAsset > 0
     ? Math.min(100, Math.max(0, boughtPct))
     : 0;
-  const leftWidth = totalAsset > 0
+  const leftWidth = startingAsset > 0
     ? Math.min(100, Math.max(0, leftPct))
     : 0;
 
@@ -161,7 +162,6 @@ function AssetAllocationPanel({
             <input
               type="number"
               step="any"
-              min="0"
               className="glass-input pl-6 font-mono"
               placeholder="10000"
               value={totalAssetInput}
@@ -177,10 +177,10 @@ function AssetAllocationPanel({
             Total Asset
           </p>
           <p className="mt-2 font-mono text-xl font-bold text-white">
-            {fmt$(totalAsset)}
+            {fmt$(startingAsset)}
           </p>
           <p className="mt-1 text-xs font-mono text-slate-600">
-            capital entered
+            cash + invested cost
           </p>
         </div>
 
@@ -204,7 +204,7 @@ function AssetAllocationPanel({
             {left >= 0 ? "" : "-"}{fmt$(left)}
           </p>
           <p className="mt-1 text-xs font-mono text-slate-600">
-            {fmtPct(leftPct).replace("+", "")} remaining
+            {fmtPct(leftPct).replace("+", "")} cash available
           </p>
         </div>
 
@@ -247,7 +247,7 @@ function AssetAllocationPanel({
       </div>
       {overAllocated && (
         <p className="mt-2 text-[10px] font-mono text-red-400">
-          Buy amount is above total asset by {fmt$(Math.abs(left))}.
+          Cash balance is negative by {fmt$(Math.abs(left))}.
         </p>
       )}
     </div>
@@ -444,7 +444,7 @@ function SortBtn({ col, sort, setSort, children }) {
 }
 
 // ── Individual lot row (inside expanded coin) ─────────────────────────────────
-function LotRow({ lot, currentPrice, onDelete, onEdit }) {
+function LotRow({ lot, currentPrice, onDelete, onEdit, onSell }) {
   const [selling, setSelling] = useState(false);
 
   const handleSell = async () => {
@@ -464,22 +464,10 @@ function LotRow({ lot, currentPrice, onDelete, onEdit }) {
     }
     setSelling(true);
     try {
-      const res = await fetch('/api/portfolio/sell', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ holdingId: lot._id, units, sellPrice: price }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        // Refresh holdings by calling parent mutator via event (could use custom event)
-        // For simplicity, reload page
-        window.location.reload();
-      } else {
-        alert(data.error || 'Sell failed');
-      }
+      await onSell(lot._id, units, price);
     } catch (e) {
       console.error(e);
-      alert('Error processing sell');
+      alert(e.message || 'Error processing sell');
     } finally {
       setSelling(false);
     }
@@ -528,6 +516,14 @@ function LotRow({ lot, currentPrice, onDelete, onEdit }) {
       </td>
       <td className="px-4 py-2.5">
         <div className="flex gap-1 justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+          <button
+            onClick={handleSell}
+            disabled={selling}
+            className="p-1 rounded text-slate-600 hover:text-emerald-400 hover:bg-emerald-400/10 transition-colors disabled:opacity-50"
+            title="Sell"
+          >
+            {selling ? <Loader2 size={11} className="animate-spin" /> : <DollarSign size={11} />}
+          </button>
           <button onClick={onEdit} className="p-1 rounded text-slate-600 hover:text-[#00d4ff] hover:bg-[rgba(0,212,255,0.08)] transition-colors">
             <Pencil size={11} />
           </button>
@@ -548,7 +544,7 @@ function LotRow({ lot, currentPrice, onDelete, onEdit }) {
 }
 
 // ── Aggregated coin row ───────────────────────────────────────────────────────
-function CoinRow({ coin, priceData, onDeleteLot, onEditLot, editingId, setEditingId }) {
+function CoinRow({ coin, priceData, onDeleteLot, onEditLot, onSellLot, editingId, setEditingId }) {
   const [expanded, setExpanded] = useState(false);
 
   // Use enriched price data from the portfolio/prices endpoint
@@ -638,6 +634,7 @@ function CoinRow({ coin, priceData, onDeleteLot, onEditLot, editingId, setEditin
             currentPrice={currentPrice}
             onDelete={() => onDeleteLot(lot._id)}
             onEdit={() => setEditingId(lot._id)}
+            onSell={onSellLot}
           />
         )
       )}
@@ -653,22 +650,37 @@ export default function Portfolio() {
   const [sort,            setSort]            = useState({ col: "value", dir: "desc" });
   const [totalAssetInput, setTotalAssetInput] = useState("");
 
-  useEffect(() => {
-    const saved = window.localStorage.getItem("td-total-asset");
-    if (saved) setTotalAssetInput(saved);
-  }, []);
-
-  useEffect(() => {
-    if (totalAssetInput) {
-      window.localStorage.setItem("td-total-asset", totalAssetInput);
-    } else {
-      window.localStorage.removeItem("td-total-asset");
-    }
-  }, [totalAssetInput]);
-
   // Holdings from MongoDB
   const { data: holdingsData, mutate: mutateHoldings } = useSWR("/api/portfolio");
   const holdings = holdingsData?.data || [];
+
+  // Cash asset stored on the user record
+  const { data: assetData, mutate: mutateAsset } = useSWR("/api/user/asset");
+  const serverAsset = assetData?.data?.totalAsset;
+
+  useEffect(() => {
+    if (serverAsset != null) setTotalAssetInput(String(serverAsset));
+  }, [serverAsset]);
+
+  useEffect(() => {
+    if (serverAsset == null) return;
+    const nextAsset = Number(totalAssetInput);
+    if (Number.isNaN(nextAsset) || nextAsset === serverAsset) return;
+
+    const timeout = setTimeout(async () => {
+      await fetch("/api/user/asset", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ totalAsset: nextAsset }),
+      });
+      mutateAsset({ success: true, data: { totalAsset: nextAsset } }, { revalidate: false });
+    }, 600);
+
+    return () => clearTimeout(timeout);
+  }, [mutateAsset, serverAsset, totalAssetInput]);
+
+  const { data: tradesData, mutate: mutateTrades } = useSWR("/api/portfolio/trades");
+  const sellHistory = (tradesData?.data || []).filter((trade) => trade.setup === "portfolio-sell" || trade.setup === "sell");
 
   // Live prices for exactly the coins in this user's portfolio
   const {
@@ -757,6 +769,7 @@ export default function Portfolio() {
       });
       await mutateHoldings();
       await mutatePrices();   // refresh prices to include the new coin
+      await mutateAsset();
       setShowForm(false);
     } finally {
       setAdding(false);
@@ -768,6 +781,22 @@ export default function Portfolio() {
     await fetch(`/api/portfolio/${id}`, { method: "DELETE" });
     mutateHoldings();
     mutatePrices();
+  };
+
+  const handleSell = async (holdingId, units, sellPrice) => {
+    const res = await fetch("/api/portfolio/sell", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ holdingId, units, sellPrice }),
+    });
+    const data = await res.json();
+    if (!res.ok || !data.success) {
+      throw new Error(data.error || "Sell failed");
+    }
+    await mutateHoldings();
+    await mutatePrices();
+    await mutateAsset();
+    await mutateTrades();
   };
 
   const handleEdit = async (id, data) => {
@@ -904,6 +933,7 @@ export default function Portfolio() {
                     priceData={prices[coin.coinId]}
                     onDeleteLot={handleDelete}
                     onEditLot={handleEdit}
+                    onSellLot={handleSell}
                     editingId={editingId}
                     setEditingId={setEditingId}
                   />
@@ -929,6 +959,68 @@ export default function Portfolio() {
                   <td />
                 </tr>
               </tfoot>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {sellHistory.length > 0 && (
+        <div className="glass-card overflow-hidden">
+          <div className="flex items-center justify-between border-b border-white/[0.06] px-4 py-3">
+            <div className="flex items-center gap-2">
+              <FileText size={14} className="text-[#00d4ff]" />
+              <h3 className="font-display text-xl tracking-wider text-white">SELL HISTORY</h3>
+            </div>
+            <span className="text-[10px] font-mono uppercase tracking-wider text-slate-600">
+              {sellHistory.length} sale{sellHistory.length !== 1 ? "s" : ""}
+            </span>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[720px]">
+              <thead>
+                <tr className="border-b border-white/[0.06]">
+                  {["Date", "Coin", "Units", "Buy", "Sell", "Received", "Profit / Loss"].map((label) => (
+                    <th key={label} className="px-4 py-3 text-right first:text-left bg-white/[0.02]">
+                      <span className="font-mono text-[10px] uppercase tracking-wider text-slate-600">{label}</span>
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {sellHistory.map((trade) => {
+                  const units = trade.tags?.find((tag) => tag.startsWith("units:"))?.split(":")[1];
+                  const buyPrice = trade.tags?.find((tag) => tag.startsWith("buy:"))?.split(":")[1];
+
+                  return (
+                    <tr key={trade._id} className="border-b border-white/[0.04] hover:bg-white/[0.025] transition-colors">
+                      <td className="px-4 py-3 font-mono text-xs text-slate-500">
+                        {new Date(trade.tradeDate || trade.createdAt).toLocaleDateString("en-US", {
+                          day: "2-digit", month: "short", year: "numeric",
+                        })}
+                      </td>
+                      <td className="px-4 py-3 font-mono text-xs text-white text-right">{trade.coin}</td>
+                      <td className="px-4 py-3 font-mono text-xs text-slate-400 text-right tabular-nums">
+                        {units ? fmtUnits(Number(units)) : "—"}
+                      </td>
+                      <td className="px-4 py-3 font-mono text-xs text-slate-500 text-right tabular-nums">
+                        {buyPrice ? fmt$(Number(buyPrice)) : "—"}
+                      </td>
+                      <td className="px-4 py-3 font-mono text-xs text-slate-400 text-right tabular-nums">
+                        {trade.exitPrice != null ? fmt$(trade.exitPrice) : fmt$(trade.entryPrice)}
+                      </td>
+                      <td className="px-4 py-3 font-mono text-xs text-white text-right tabular-nums">
+                        {fmt$(trade.tradeAmount)}
+                      </td>
+                      <td className={clsx("px-4 py-3 font-mono text-xs font-bold text-right tabular-nums", pnlClass(trade.netPnl))}>
+                        {trade.netPnl >= 0 ? "+" : "-"}{fmt$(trade.netPnl)}
+                        {trade.netPnlPercent != null && (
+                          <span className="ml-2 text-[10px] font-normal opacity-70">{fmtPct(trade.netPnlPercent)}</span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
             </table>
           </div>
         </div>
