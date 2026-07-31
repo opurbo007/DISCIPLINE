@@ -241,4 +241,4 @@ results.push(gold);
 
 MIT — use freely for personal or commercial projects.
 
-# DISCIPLINE
+# DISCIPLINE HERO
