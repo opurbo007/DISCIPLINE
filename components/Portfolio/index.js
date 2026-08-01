@@ -532,44 +532,145 @@ function SortBtn({ col, sort, setSort, children }) {
   );
 }
 
-// ── Individual lot row (inside expanded coin) ─────────────────────────────────
-function LotRow({ lot, currentPrice, onDelete, onEdit, onSell }) {
+// ── Sell modal (custom, replaces window.prompt/alert) ─────────────────────────
+function SellModal({ lot, currentPrice, onClose, onConfirm }) {
+  const [units, setUnits] = useState(String(lot.units));
+  const [price, setPrice] = useState(currentPrice ? String(currentPrice) : "");
+  const [error, setError] = useState("");
   const [selling, setSelling] = useState(false);
-  const [showSellModal, setShowSellModal] = useState(false);
-  const [sellUnits, setSellUnits] = useState(lot.units);
-  const [sellPrice, setSellPrice] = useState(currentPrice || "");
 
-  const handleSell = async () => {
-    const unitsStr = window.prompt(
-      `Enter units to sell (max ${lot.units}):`,
-      lot.units,
-    );
-    if (unitsStr === null) return;
-    const units = parseFloat(unitsStr);
-    if (isNaN(units) || units <= 0 || units > lot.units) {
-      alert("Invalid units");
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    const u = parseFloat(units);
+    const p = parseFloat(price);
+    if (isNaN(u) || u <= 0 || u > lot.units) {
+      setError(`Enter units to sell (max ${lot.units}).`);
       return;
     }
-    const priceStr = window.prompt(
-      "Enter sell price per unit (USD):",
-      currentPrice || "",
-    );
-    if (priceStr === null) return;
-    const price = parseFloat(priceStr);
-    if (isNaN(price) || price <= 0) {
-      alert("Invalid price");
+    if (isNaN(p) || p <= 0) {
+      setError("Enter a valid sell price per unit (USD).");
       return;
     }
+    setError("");
     setSelling(true);
     try {
-      await onSell(lot._id, units, price);
-    } catch (e) {
-      console.error(e);
-      alert(e.message || "Error processing sell");
-    } finally {
+      await onConfirm(lot._id, u, p);
+      onClose();
+    } catch (err) {
+      console.error(err);
+      setError(err.message || "Error processing sell");
       setSelling(false);
     }
   };
+
+  const total = (parseFloat(units) || 0) * (parseFloat(price) || 0);
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
+      onClick={onClose}
+    >
+      <form
+        onClick={(e) => e.stopPropagation()}
+        onSubmit={handleSubmit}
+        className="w-full max-w-md glass-card p-6 space-y-4 animate-fade-up"
+      >
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <CoinLogo
+              icon={lot.icon}
+              symbol={lot.symbol}
+              size={28}
+            />
+            <div>
+              <h3 className="font-display text-xl tracking-wider text-white">
+                SELL {lot.symbol}
+              </h3>
+              <p className="text-xs font-mono text-slate-600">
+                max {fmtUnits(lot.units)} units available
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="p-1.5 rounded text-slate-600 hover:text-white hover:bg-white/5 transition-colors"
+          >
+            <X size={16} />
+          </button>
+        </div>
+
+        <div>
+          <label className="text-[11px] text-slate-500 font-mono uppercase tracking-wider mb-1.5 block">
+            Units to Sell *
+          </label>
+          <input
+            type="number"
+            step="any"
+            min="0"
+            className="glass-input font-mono"
+            placeholder="0.5"
+            value={units}
+            onChange={(e) => setUnits(e.target.value)}
+            autoFocus
+          />
+        </div>
+
+        <div>
+          <label className="text-[11px] text-slate-500 font-mono uppercase tracking-wider mb-1.5 block">
+            Sell Price (USD) *
+          </label>
+          <div className="relative">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-600 font-mono text-sm">
+              $
+            </span>
+            <input
+              type="number"
+              step="any"
+              min="0"
+              className="glass-input font-mono pl-6"
+              placeholder="65000"
+              value={price}
+              onChange={(e) => setPrice(e.target.value)}
+            />
+          </div>
+        </div>
+
+        {total > 0 && (
+          <p className="text-xs text-slate-500 font-mono">
+            You will receive:{" "}
+            <span className="text-[#00d4ff] font-bold">{fmt$(total)}</span>
+          </p>
+        )}
+
+        {error && (
+          <p className="text-xs text-red-400 font-mono flex items-center gap-1.5">
+            <AlertCircle size={12} className="shrink-0" />
+            {error}
+          </p>
+        )}
+
+        <div className="flex gap-2">
+          <button type="submit" className="btn-arc flex-1" disabled={selling}>
+            {selling ? (
+              <Loader2 size={13} className="animate-spin" />
+            ) : (
+              <DollarSign size={13} />
+            )}
+            {selling ? "Selling…" : "Confirm Sell"}
+          </button>
+          <button type="button" className="btn-ghost" onClick={onClose}>
+            <X size={13} /> Cancel
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+}
+
+// ── Individual lot row (inside expanded coin) ─────────────────────────────────
+function LotRow({ lot, currentPrice, onDelete, onEdit, onSell }) {
+  const [showSellModal, setShowSellModal] = useState(false);
 
   const [confirmDel, setConfirmDel] = useState(false);
   const cost = lot.units * lot.purchasePrice;
@@ -580,6 +681,7 @@ function LotRow({ lot, currentPrice, onDelete, onEdit, onSell }) {
     : null;
 
   return (
+    <>
     <tr className="border-b border-white/[0.03] bg-white/[0.01] hover:bg-white/[0.025] transition-colors group">
       <td className="px-4 py-2.5 pl-16">
         <div className="flex items-center gap-2">
@@ -639,16 +741,11 @@ function LotRow({ lot, currentPrice, onDelete, onEdit, onSell }) {
       <td className="px-4 py-2.5">
         <div className="flex gap-1 justify-center opacity-0 group-hover:opacity-100 transition-opacity">
           <button
-            onClick={handleSell}
-            disabled={selling}
-            className="p-1 rounded text-slate-600 hover:text-emerald-400 hover:bg-emerald-400/10 transition-colors disabled:opacity-50"
+            onClick={() => setShowSellModal(true)}
+            className="p-1 rounded text-slate-600 hover:text-emerald-400 hover:bg-emerald-400/10 transition-colors"
             title="Sell"
           >
-            {selling ? (
-              <Loader2 size={11} className="animate-spin" />
-            ) : (
-              <DollarSign size={11} />
-            )}
+            <DollarSign size={11} />
           </button>
           <button
             onClick={onEdit}
@@ -682,6 +779,15 @@ function LotRow({ lot, currentPrice, onDelete, onEdit, onSell }) {
         </div>
       </td>
     </tr>
+    {showSellModal && (
+      <SellModal
+        lot={lot}
+        currentPrice={currentPrice}
+        onClose={() => setShowSellModal(false)}
+        onConfirm={onSell}
+      />
+    )}
+    </>
   );
 }
 
