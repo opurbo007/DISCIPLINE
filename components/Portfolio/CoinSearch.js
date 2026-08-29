@@ -160,7 +160,7 @@ export default function CoinSearch({ value, onChange, onPriceHint, disabled }) {
           className={clsx(
             "glass-input pl-8 pr-8 truncate",
             disabled && "opacity-50 cursor-not-allowed",
-            hasSelection && "text-[#00d4ff]"
+            hasSelection && "text-[#22c55e]"
           )}
           placeholder="Search any coin… (BTC, ETH, PEPE…)"
           value={query}
@@ -204,7 +204,7 @@ export default function CoinSearch({ value, onChange, onPriceHint, disabled }) {
           style={{
             background:    "rgba(8,12,20,0.97)",
             backdropFilter: "blur(24px)",
-            boxShadow:     "0 16px 48px rgba(0,0,0,0.7), 0 0 0 1px rgba(0,212,255,0.08)",
+            boxShadow:     "0 16px 48px rgba(0,0,0,0.7), 0 0 0 1px rgba(34,197,94,0.1)",
             maxHeight:     "280px",
             overflowY:     "auto",
           }}
@@ -240,7 +240,7 @@ export default function CoinSearch({ value, onChange, onPriceHint, disabled }) {
               className={clsx(
                 "w-full flex items-center gap-3 px-3 py-2.5 text-left transition-colors",
                 cursor === i
-                  ? "bg-[rgba(0,212,255,0.08)] text-white"
+                  ? "bg-[rgba(34,197,94,0.1)] text-white"
                   : "hover:bg-white/[0.04] text-slate-300"
               )}
             >
