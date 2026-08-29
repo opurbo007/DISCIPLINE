@@ -28,7 +28,7 @@ const MOODS      = ["confident", "uncertain", "fomo", "revenge", "neutral"];
 
 const STATUS_STYLE = {
   PLANNED:   { label: "Planned",   cls: "text-slate-400  bg-white/5        border-white/10"         },
-  OPEN:      { label: "Open",      cls: "text-[#00d4ff]  bg-[rgba(0,212,255,0.1)] border-[rgba(0,212,255,0.2)]" },
+  OPEN:      { label: "Open",      cls: "text-[#22c55e]  bg-[rgba(34,197,94,0.12)] border-[rgba(34,197,94,0.25)]" },
   CLOSED:    { label: "Closed",    cls: "text-slate-300  bg-white/8        border-white/15"         },
   CANCELLED: { label: "Cancelled", cls: "text-slate-600  bg-white/3        border-white/6"          },
 };
@@ -56,7 +56,7 @@ const pnlClass = (n) =>
 // ── Stat mini-card ─────────────────────────────────────────────────────────────
 function MiniStat({ label, value, sub, icon: Icon, color = "slate", highlight }) {
   const colors = {
-    arc:   "text-[#00d4ff]",
+    arc:   "text-[#22c55e]",
     ember: "text-[#f59e0b]",
     bull:  "text-emerald-400",
     bear:  "text-red-400",
@@ -271,7 +271,7 @@ function TradeForm({ initial = {}, onSubmit, onCancel, loading }) {
             <p className="text-[10px] font-mono text-slate-600 mt-1 flex items-center gap-1">
               <Zap size={8} />
               Calculated: <span className={pnlClass(parseFloat(pnlPreview))}>{fmt$(parseFloat(pnlPreview))}</span>
-              <button type="button" className="text-[#00d4ff] underline ml-1"
+              <button type="button" className="text-[#22c55e] underline ml-1"
                 onClick={() => setF((p) => ({ ...p, netPnl: pnlPreview }))}>use</button>
             </p>
           )}
@@ -352,7 +352,7 @@ function Analytics({ stats, loading }) {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-16">
-        <Loader2 size={28} className="text-[#00d4ff] animate-spin" />
+        <Loader2 size={28} className="text-[#22c55e] animate-spin" />
       </div>
     );
   }
@@ -527,7 +527,7 @@ function Analytics({ stats, loading }) {
                         </div>
                         <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
                           <div
-                            className={clsx("h-full rounded-full", parseInt(wr) >= 50 ? "bg-[#00d4ff]" : "bg-amber-500")}
+                            className={clsx("h-full rounded-full", parseInt(wr) >= 50 ? "bg-[#22c55e]" : "bg-amber-500")}
                             style={{ width: `${wr}%` }}
                           />
                         </div>
@@ -635,7 +635,7 @@ function TradeCard({ trade, onEdit, onDelete, onStatusChange }) {
               { label: "Entry",      val: trade.entryPrice,  color: "text-white"        },
               { label: "Stop Loss",  val: trade.stopLoss,    color: "text-red-400"      },
               { label: "Take Profit",val: trade.takeProfit,  color: "text-emerald-400"  },
-              { label: "Exit Price", val: trade.exitPrice,   color: "text-[#00d4ff]"    },
+              { label: "Exit Price", val: trade.exitPrice,   color: "text-[#22c55e]"    },
               { label: "Position",   val: trade.positionSize,color: "text-amber-400"    },
             ].map(({ label, val, color }) => (
               <div key={label} className="bg-white/[0.03] rounded-lg p-2.5 border border-white/5">
@@ -841,7 +841,7 @@ export default function Journal() {
       {trades.length > 0 && (
         <div className="flex flex-wrap gap-3">
           {[
-            { label: "Open",    val: localStats.open,    color: "text-[#00d4ff]"  },
+            { label: "Open",    val: localStats.open,    color: "text-[#22c55e]"  },
             { label: "Planned", val: localStats.planned, color: "text-slate-400"  },
             { label: "Win Rate",val: localStats.winRate ? `${localStats.winRate}%` : "—", color: localStats.winRate >= 50 ? "text-emerald-400" : "text-red-400" },
           ].map(({ label, val, color }) => (
