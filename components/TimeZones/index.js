@@ -128,7 +128,7 @@ const ACCENT_CARD = {
 };
 
 const ACCENT_TIME = {
-  arc:   "text-[#00d4ff]",
+  arc:   "text-[#22c55e]",
   ember: "text-[#f59e0b]",
   bull:  "text-emerald-400",
 };
@@ -189,7 +189,7 @@ function SessionBar({ date, market, status, accent }) {
   const pct = Math.min(100, Math.max(0, ((nowMin - startMin) / (endMin - startMin)) * 100));
 
   const barColor = {
-    arc:   "bg-[#00d4ff]",
+    arc:   "bg-[#22c55e]",
     ember: "bg-[#f59e0b]",
     bull:  "bg-emerald-400",
   }[accent];
@@ -228,7 +228,7 @@ export default function TimeZones({ compact = false }) {
   return (
     <section>
       <div className="flex items-center gap-3 mb-4">
-        <Clock size={16} className="text-[#00d4ff]" />
+        <Clock size={16} className="text-[#22c55e]" />
         <h2 className="font-display text-2xl tracking-wider text-white">MARKET SESSIONS</h2>
       </div>
 
