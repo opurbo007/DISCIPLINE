@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import clsx from "clsx";
 import CoinSearch from "./CoinSearch";
+import Modal from "@/components/UI/Modal";
 
 // ── Formatters
 const fmt$ = (n, dp = 2) =>
@@ -94,8 +95,8 @@ function CoinLogo({ icon, symbol, size = 32 }) {
 function StatCard({ label, value, sub, icon: Icon, color = "arc", trend }) {
   const colorMap = {
     arc: {
-      text: "text-[#00d4ff]",
-      bg: "bg-[rgba(0,212,255,0.08)]",
+      text: "text-[#22c55e]",
+      bg: "bg-[rgba(34,197,94,0.1)]",
       card: "glass-card-arc",
     },
     ember: {
@@ -181,7 +182,7 @@ function AssetAllocationPanel({
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <div className="flex items-center gap-2">
-            <Wallet size={16} className="text-[#00d4ff]" />
+            <Wallet size={16} className="text-[#22c55e]" />
             <h3 className="font-display text-2xl tracking-wider text-white">
               TOTAL ASSET
             </h3>
@@ -223,7 +224,7 @@ function AssetAllocationPanel({
           <p className="text-[10px] font-mono uppercase tracking-wider text-slate-600">
             Buy
           </p>
-          <p className="mt-2 font-mono text-xl font-bold text-[#00d4ff]">
+          <p className="mt-2 font-mono text-xl font-bold text-[#22c55e]">
             {fmtPct(boughtPct).replace("+", "")}
           </p>
           <p className="mt-1 text-xs font-mono text-slate-600">
@@ -282,7 +283,7 @@ function AssetAllocationPanel({
       <div className="mt-4 h-2 overflow-hidden rounded-full bg-white/5">
         <div className="flex h-full">
           <div
-            className={clsx(overAllocated ? "bg-red-400" : "bg-[#00d4ff]")}
+            className={clsx(overAllocated ? "bg-red-400" : "bg-[#22c55e]")}
             style={{ width: `${investedWidth}%` }}
           />
           <div className="bg-[#f59e0b]" style={{ width: `${leftWidth}%` }} />
@@ -475,7 +476,7 @@ function HoldingForm({ initial = {}, onSubmit, onCancel, loading }) {
         {totalCost !== null && (
           <p className="text-xs text-slate-500 font-mono ml-auto">
             Total invested:{" "}
-            <span className="text-[#00d4ff] font-bold">{fmt$(totalCost)}</span>
+            <span className="text-[#22c55e] font-bold">{fmt$(totalCost)}</span>
           </p>
         )}
       </div>
@@ -515,7 +516,7 @@ function SortBtn({ col, sort, setSort, children }) {
       }
       className={clsx(
         "flex items-center gap-1 font-mono text-[10px] uppercase tracking-wider whitespace-nowrap transition-colors",
-        active ? "text-[#00d4ff]" : "text-slate-600 hover:text-slate-400",
+        active ? "text-[#22c55e]" : "text-slate-600 hover:text-slate-400",
       )}
     >
       {children}
@@ -639,7 +640,7 @@ function SellModal({ lot, currentPrice, onClose, onConfirm }) {
         {total > 0 && (
           <p className="text-xs text-slate-500 font-mono">
             You will receive:{" "}
-            <span className="text-[#00d4ff] font-bold">{fmt$(total)}</span>
+            <span className="text-[#22c55e] font-bold">{fmt$(total)}</span>
           </p>
         )}
 
@@ -665,6 +666,185 @@ function SellModal({ lot, currentPrice, onClose, onConfirm }) {
         </div>
       </form>
     </div>
+  );
+}
+
+// ── Edit-sell modal (for sell history) ────────────────────────────────────────
+function EditSellModal({ trade, onClose, onSave }) {
+  const unitsTag = (trade.tags || []).find((t) => t.startsWith("units:"));
+  const buyTag = (trade.tags || []).find((t) => t.startsWith("buy:"));
+  const initialUnits = unitsTag ? unitsTag.split(":")[1] : "";
+  const initialBuy = buyTag ? buyTag.split(":")[1] : trade.entryPrice;
+
+  const [units, setUnits] = useState(String(initialUnits ?? ""));
+  const [sellPrice, setSellPrice] = useState(
+    trade.exitPrice != null ? String(trade.exitPrice) : "",
+  );
+  const [sellDate, setSellDate] = useState(
+    (trade.tradeDate || trade.createdAt)
+      ? new Date(trade.tradeDate || trade.createdAt).toISOString().split("T")[0]
+      : new Date().toISOString().split("T")[0],
+  );
+  const [notes, setNotes] = useState(trade.outcome || "");
+  const [error, setError] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  const buyPrice = Number(initialBuy) || 0;
+  const u = parseFloat(units) || 0;
+  const p = parseFloat(sellPrice) || 0;
+  const pnl = (p - buyPrice) * u;
+  const pnlPct = buyPrice > 0 ? ((p - buyPrice) / buyPrice) * 100 : 0;
+  const received = u * p;
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (isNaN(u) || u <= 0) {
+      setError("Units must be a positive number.");
+      return;
+    }
+    if (isNaN(p) || p <= 0) {
+      setError("Sell price must be a positive number.");
+      return;
+    }
+    setError("");
+    setSaving(true);
+    try {
+      await onSave(trade._id, {
+        units: u,
+        sellPrice: p,
+        sellDate,
+        notes,
+      });
+      onClose();
+    } catch (err) {
+      console.error(err);
+      setError(err.message || "Failed to save");
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Modal
+      open
+      onClose={onClose}
+      title={`EDIT SELL · ${trade.coin}`}
+      subtitle="Update the units, price, date or notes for this sale."
+    >
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label className="field-label">Units Sold *</label>
+            <input
+              type="number"
+              step="any"
+              min="0"
+              className="glass-input font-mono"
+              value={units}
+              onChange={(e) => setUnits(e.target.value)}
+              autoFocus
+              required
+            />
+            {buyPrice > 0 && (
+              <p className="text-[10px] text-slate-700 mt-1 font-mono">
+                Buy price: {fmt$(buyPrice)}
+              </p>
+            )}
+          </div>
+          <div>
+            <label className="field-label">Sell Price (USD) *</label>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-600 font-mono text-sm">
+                $
+              </span>
+              <input
+                type="number"
+                step="any"
+                min="0"
+                className="glass-input font-mono pl-6"
+                value={sellPrice}
+                onChange={(e) => setSellPrice(e.target.value)}
+                required
+              />
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <label className="field-label">
+            <Calendar size={9} className="inline mr-1" />
+            Sell Date
+          </label>
+          <input
+            type="date"
+            className="glass-input font-mono"
+            value={sellDate}
+            onChange={(e) => setSellDate(e.target.value)}
+          />
+        </div>
+
+        <div>
+          <label className="field-label">Notes</label>
+          <input
+            className="glass-input"
+            placeholder="Optional notes about this sale"
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+          />
+        </div>
+
+        {/* Live preview */}
+        {u > 0 && p > 0 && (
+          <div className="grid grid-cols-3 gap-2 pt-1">
+            <div className="rounded-lg border border-white/8 bg-white/[0.025] p-2.5">
+              <p className="text-[9px] font-mono uppercase tracking-wider text-slate-600">
+                Received
+              </p>
+              <p className="mt-1 font-mono text-sm font-bold text-white">
+                {fmt$(received)}
+              </p>
+            </div>
+            <div className="rounded-lg border border-white/8 bg-white/[0.025] p-2.5">
+              <p className="text-[9px] font-mono uppercase tracking-wider text-slate-600">
+                P&L
+              </p>
+              <p className={clsx("mt-1 font-mono text-sm font-bold", pnlClass(pnl))}>
+                {pnl >= 0 ? "+" : "-"}
+                {fmt$(pnl)}
+              </p>
+            </div>
+            <div className="rounded-lg border border-white/8 bg-white/[0.025] p-2.5">
+              <p className="text-[9px] font-mono uppercase tracking-wider text-slate-600">
+                P&L %
+              </p>
+              <p className={clsx("mt-1 font-mono text-sm font-bold", pnlClass(pnlPct))}>
+                {fmtPct(pnlPct)}
+              </p>
+            </div>
+          </div>
+        )}
+
+        {error && (
+          <p className="text-xs text-red-400 font-mono flex items-center gap-1.5">
+            <AlertCircle size={12} className="shrink-0" />
+            {error}
+          </p>
+        )}
+
+        <div className="flex gap-2 pt-1">
+          <button type="submit" className="btn-arc flex-1" disabled={saving}>
+            {saving ? (
+              <Loader2 size={13} className="animate-spin" />
+            ) : (
+              <Check size={13} />
+            )}
+            {saving ? "Saving…" : "Save Changes"}
+          </button>
+          <button type="button" className="btn-ghost" onClick={onClose}>
+            <X size={13} /> Cancel
+          </button>
+        </div>
+      </form>
+    </Modal>
   );
 }
 
@@ -749,7 +929,7 @@ function LotRow({ lot, currentPrice, onDelete, onEdit, onSell }) {
           </button>
           <button
             onClick={onEdit}
-            className="p-1 rounded text-slate-600 hover:text-[#00d4ff] hover:bg-[rgba(0,212,255,0.08)] transition-colors"
+            className="p-1 rounded text-slate-600 hover:text-[#22c55e] hover:bg-[rgba(34,197,94,0.12)] transition-colors"
           >
             <Pencil size={11} />
           </button>
@@ -909,7 +1089,7 @@ function CoinRow({
           editingId === lot._id ? (
             <tr
               key={lot._id}
-              className="bg-[rgba(0,212,255,0.02)] border-b border-white/[0.04]"
+              className="bg-[rgba(34,197,94,0.03)] border-b border-white/[0.04]"
             >
               <td colSpan={8} className="px-4 py-4">
                 <HoldingForm
@@ -942,6 +1122,7 @@ export default function Portfolio() {
   const [editingId, setEditingId] = useState(null);
   const [sort, setSort] = useState({ col: "value", dir: "desc" });
   const [totalAssetInput, setTotalAssetInput] = useState("");
+  const [editingSell, setEditingSell] = useState(null);
 
   // Holdings from MongoDB
   const { data: holdingsData, mutate: mutateHoldings } =
@@ -1128,6 +1309,36 @@ export default function Portfolio() {
     mutateHoldings();
   };
 
+  const handleEditSell = async (id, data) => {
+    const res = await fetch(`/api/portfolio/trades/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+    const result = await res.json();
+    if (!res.ok || !result.success) {
+      throw new Error(result.error || "Failed to update sell");
+    }
+    await mutateTrades();
+    await mutateAsset();
+    await mutateHoldings();
+  };
+
+  const handleDeleteSell = async (id) => {
+    if (!confirm("Delete this sell record? This will also restore the units to the holding.")) {
+      return;
+    }
+    const res = await fetch(`/api/portfolio/trades/${id}`, { method: "DELETE" });
+    const result = await res.json();
+    if (!res.ok || !result.success) {
+      alert(result.error || "Failed to delete sell");
+      return;
+    }
+    await mutateTrades();
+    await mutateAsset();
+    await mutateHoldings();
+  };
+
   const coinsWithoutPrice = aggregated
     .filter((c) => prices[c.coinId]?.price == null)
     .map((c) => c.symbol);
@@ -1138,7 +1349,7 @@ export default function Portfolio() {
       {/* ── Header ──────────────────────────────────────────────────── */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <Wallet size={18} className="text-[#00d4ff]" />
+          <Wallet size={18} className="text-[#22c55e]" />
           <h2 className="font-display text-3xl tracking-wider text-white">
             MY PORTFOLIO
           </h2>
@@ -1355,7 +1566,7 @@ export default function Portfolio() {
         <div className="glass-card overflow-hidden">
           <div className="flex items-center justify-between border-b border-white/[0.06] px-4 py-3">
             <div className="flex items-center gap-2">
-              <FileText size={14} className="text-[#00d4ff]" />
+              <FileText size={14} className="text-[#22c55e]" />
               <h3 className="font-display text-xl tracking-wider text-white">
                 SELL HISTORY
               </h3>
@@ -1365,7 +1576,7 @@ export default function Portfolio() {
             </span>
           </div>
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[720px]">
+            <table className="w-full min-w-[820px]">
               <thead>
                 <tr className="border-b border-white/[0.06]">
                   {[
@@ -1376,10 +1587,11 @@ export default function Portfolio() {
                     "Sell",
                     "Received",
                     "Profit / Loss",
+                    "",
                   ].map((label) => (
                     <th
-                      key={label}
-                      className="px-4 py-3 text-right first:text-left bg-white/[0.02]"
+                      key={label || "actions"}
+                      className="px-4 py-3 text-right first:text-left last:text-center bg-white/[0.02]"
                     >
                       <span className="font-mono text-[10px] uppercase tracking-wider text-slate-600">
                         {label}
@@ -1400,7 +1612,7 @@ export default function Portfolio() {
                   return (
                     <tr
                       key={trade._id}
-                      className="border-b border-white/[0.04] hover:bg-white/[0.025] transition-colors"
+                      className="border-b border-white/[0.04] hover:bg-white/[0.025] transition-colors group"
                     >
                       <td className="px-4 py-3 font-mono text-xs text-slate-500">
                         {new Date(
@@ -1442,6 +1654,24 @@ export default function Portfolio() {
                           </span>
                         )}
                       </td>
+                      <td className="px-4 py-3">
+                        <div className="flex gap-1 justify-center opacity-60 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+                          <button
+                            onClick={() => setEditingSell(trade)}
+                            className="p-1.5 rounded text-slate-400 hover:text-[#22c55e] hover:bg-[rgba(34,197,94,0.12)] transition-colors"
+                            title="Edit sale"
+                          >
+                            <Pencil size={12} />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteSell(trade._id)}
+                            className="p-1.5 rounded text-slate-400 hover:text-red-400 hover:bg-red-400/10 transition-colors"
+                            title="Delete sale"
+                          >
+                            <Trash2 size={12} />
+                          </button>
+                        </div>
+                      </td>
                     </tr>
                   );
                 })}
@@ -1449,6 +1679,14 @@ export default function Portfolio() {
             </table>
           </div>
         </div>
+      )}
+
+      {editingSell && (
+        <EditSellModal
+          trade={editingSell}
+          onClose={() => setEditingSell(null)}
+          onSave={handleEditSell}
+        />
       )}
 
       {/* Footer */}
