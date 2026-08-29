@@ -23,7 +23,7 @@ import clsx from "clsx";
 const CATEGORIES = ["all", "charting", "news", "broker", "data", "education", "tools", "general"];
 
 const CATEGORY_COLOR = {
-  charting:  "text-[#00d4ff]  bg-[rgba(0,212,255,0.08)]  border-[rgba(0,212,255,0.15)]",
+  charting:  "text-[#22c55e]  bg-[rgba(34,197,94,0.1)]   border-[rgba(34,197,94,0.2)]",
   news:      "text-amber-400  bg-amber-400/10             border-amber-400/20",
   broker:    "text-emerald-400 bg-emerald-400/10          border-emerald-400/20",
   data:      "text-purple-400 bg-purple-400/10            border-purple-400/20",
@@ -170,7 +170,7 @@ function BookmarkCard({ bookmark, onDelete, onEdit }) {
             href={bookmark.url}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-white font-semibold text-sm hover:text-[#00d4ff] transition-colors truncate"
+            className="text-white font-semibold text-sm hover:text-[#22c55e] transition-colors truncate"
           >
             {bookmark.title}
           </a>
@@ -181,7 +181,7 @@ function BookmarkCard({ bookmark, onDelete, onEdit }) {
         <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
           <button
             onClick={() => setEditing(true)}
-            className="p-1.5 rounded-md text-slate-500 hover:text-[#00d4ff] hover:bg-white/5 transition-colors"
+            className="p-1.5 rounded-md text-slate-500 hover:text-[#22c55e] hover:bg-white/5 transition-colors"
             title="Edit"
           >
             <Pencil size={11} />
@@ -326,7 +326,7 @@ export default function Bookmarks({ compact = false }) {
               className={clsx(
                 "text-[11px] font-mono px-2.5 py-1 rounded-full border transition-all",
                 activeFilter === cat
-                  ? "border-[#00d4ff]/40 text-[#00d4ff] bg-[rgba(0,212,255,0.1)]"
+                  ? "border-[#22c55e]/50 text-[#22c55e] bg-[rgba(34,197,94,0.12)]"
                   : "border-white/8 text-slate-500 hover:text-slate-300 hover:border-white/15"
               )}
             >
