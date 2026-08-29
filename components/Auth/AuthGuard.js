@@ -28,9 +28,9 @@ export default function AuthGuard({ children }) {
   // ── Loading state ─────────────────────────────────────────────────────────
   if (status === "loading") {
     return (
-      <div className="min-h-screen bg-[#04080f] flex items-center justify-center">
+      <div className="min-h-screen bg-black flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
-          <Loader2 size={32} className="text-[#00d4ff] animate-spin" />
+          <Loader2 size={32} className="text-[#22c55e] animate-spin" />
           <p className="text-slate-500 font-mono text-sm">Verifying session…</p>
         </div>
       </div>
