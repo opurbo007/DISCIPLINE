@@ -116,12 +116,12 @@ export default function RegisterPage() {
     <>
       <Head><title>Create Account · Trading Discipline Dashboard</title></Head>
 
-      <div className="min-h-screen bg-[#04080f] flex items-center justify-center px-4 relative overflow-hidden">
+      <div className="min-h-screen bg-black flex items-center justify-center px-4 relative overflow-hidden">
         <div className="pointer-events-none fixed top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px]"
-          style={{ background: "radial-gradient(ellipse, rgba(245,158,11,0.05) 0%, transparent 70%)" }} />
+          style={{ background: "radial-gradient(ellipse, rgba(34,197,94,0.06) 0%, transparent 70%)" }} />
         <div className="pointer-events-none fixed inset-0 opacity-30"
           style={{
-            backgroundImage: "linear-gradient(rgba(0,212,255,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(0,212,255,0.03) 1px, transparent 1px)",
+            backgroundImage: "linear-gradient(rgba(34,197,94,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(34,197,94,0.04) 1px, transparent 1px)",
             backgroundSize: "32px 32px",
           }} />
 
@@ -130,17 +130,17 @@ export default function RegisterPage() {
           <div className="flex flex-col items-center mb-8">
             <div className="w-14 h-14 rounded-2xl flex items-center justify-center mb-4"
               style={{
-                background: "linear-gradient(135deg, rgba(245,158,11,0.2), rgba(245,158,11,0.04))",
-                border: "1px solid rgba(245,158,11,0.3)",
-                boxShadow: "0 0 40px rgba(245,158,11,0.1)",
+                background: "linear-gradient(135deg, rgba(34,197,94,0.25), rgba(34,197,94,0.04))",
+                border: "1px solid rgba(34,197,94,0.35)",
+                boxShadow: "0 0 40px rgba(34,197,94,0.18)",
               }}>
-              <BarChart2 size={26} className="text-[#f59e0b]" />
+              <BarChart2 size={26} className="text-[#22c55e]" />
             </div>
             <h1 className="font-display text-3xl tracking-widest text-white">TRADING DISCIPLINE</h1>
             <p className="text-slate-500 text-sm font-mono mt-1">Create your free account</p>
           </div>
 
-          <div className="glass-card-ember p-8 space-y-5">
+          <div className="glass-card-arc p-8 space-y-5">
             <h2 className="text-white font-semibold text-lg">Get started</h2>
 
             {error && (
@@ -203,10 +203,10 @@ export default function RegisterPage() {
               <button type="submit" disabled={loading || success}
                 className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg font-semibold text-sm transition-all duration-200 mt-2"
                 style={{
-                  background: "linear-gradient(135deg, rgba(245,158,11,0.25), rgba(245,158,11,0.1))",
-                  border: "1px solid rgba(245,158,11,0.3)",
-                  color: "#f59e0b",
-                  boxShadow: "0 0 20px rgba(245,158,11,0.08)",
+                  background: "linear-gradient(135deg, rgba(34,197,94,0.25), rgba(34,197,94,0.1))",
+                  border: "1px solid rgba(34,197,94,0.35)",
+                  color: "#22c55e",
+                  boxShadow: "0 0 20px rgba(34,197,94,0.15)",
                 }}>
                 {loading ? <Loader2 size={15} className="animate-spin" /> : <UserPlus size={15} />}
                 {loading ? "Creating account…" : "Create Account"}
@@ -221,7 +221,7 @@ export default function RegisterPage() {
 
             <p className="text-center text-sm text-slate-500">
               Already have an account?{" "}
-              <Link href="/login" className="text-[#f59e0b] hover:text-[#d97706] font-medium transition-colors">
+              <Link href="/login" className="text-[#22c55e] hover:text-[#16a34a] font-medium transition-colors">
                 Sign in
               </Link>
             </p>
