@@ -23,7 +23,7 @@ import clsx from "clsx";
 // ── Color palette options ─────────────────────────────────────────────────────
 const COLOR_OPTIONS = [
   { key: "default", label: "Default", cardClass: "glass-card",       dotClass: "bg-white/20" },
-  { key: "arc",     label: "Cyan",    cardClass: "glass-card-arc",   dotClass: "bg-[#00d4ff]" },
+  { key: "arc",     label: "Green",   cardClass: "glass-card-arc",   dotClass: "bg-[#22c55e]" },
   { key: "ember",   label: "Gold",    cardClass: "glass-card-ember", dotClass: "bg-[#f59e0b]" },
   { key: "bull",    label: "Green",   cardClass: "glass-card-bull",  dotClass: "bg-emerald-400" },
   { key: "bear",    label: "Red",     cardClass: "glass-card-bear",  dotClass: "bg-red-400" },
@@ -249,7 +249,7 @@ function NoteCard({ note, onDelete, onUpdate }) {
           </button>
           <button
             onClick={() => setEditing(true)}
-            className="p-1.5 rounded-md text-slate-600 hover:text-[#00d4ff] hover:bg-[rgba(0,212,255,0.05)] transition-colors"
+            className="p-1.5 rounded-md text-slate-600 hover:text-[#22c55e] hover:bg-[rgba(34,197,94,0.08)] transition-colors"
           >
             <Pencil size={11} />
           </button>
