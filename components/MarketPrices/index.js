@@ -11,9 +11,8 @@ import PriceCard, { PriceCardSkeleton } from "./PriceCard";
 import clsx from "clsx";
 
 const SKELETON_COUNT = 8;
-const REFRESH_COOLDOWN = 30; // manual refresh cooldown in seconds
+const REFRESH_COOLDOWN = 30;
 
-// ── Countdown hook for refresh cooldown ──────────────────────────────────────
 function useRefreshCooldown(seconds) {
   const [remaining, setRemaining] = useState(0);
   const start = () => setRemaining(seconds);
@@ -27,7 +26,6 @@ function useRefreshCooldown(seconds) {
   return { remaining, onCooldown: remaining > 0, start };
 }
 
-// ── Age badge ─────────────────────────────────────────────────────────────────
 function AgeBadge({ timestamp, stale, marketOpen }) {
   const [ageText, setAgeText] = useState("");
 
@@ -47,14 +45,14 @@ function AgeBadge({ timestamp, stale, marketOpen }) {
   if (!ageText) return null;
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex items-center gap-1.5">
       {stale && (
-        <span className="text-[10px] font-mono text-amber-500/70 bg-amber-500/10 border border-amber-500/20 px-1.5 py-0.5 rounded">
+        <span className="text-[9px] font-mono text-amber-500/70 bg-amber-500/10 border border-amber-500/20 px-1.5 py-0.5 rounded">
           STALE
         </span>
       )}
       {!marketOpen && (
-        <span className="text-[10px] font-mono text-slate-600 bg-white/5 border border-white/8 px-1.5 py-0.5 rounded flex items-center gap-1">
+        <span className="text-[9px] font-mono text-slate-600 bg-white/5 border border-white/8 px-1.5 py-0.5 rounded flex items-center gap-1">
           <Clock size={8} />
           MKT CLOSED
         </span>
@@ -64,15 +62,14 @@ function AgeBadge({ timestamp, stale, marketOpen }) {
   );
 }
 
-export default function MarketPrices() {
+export default function MarketPrices({ compact = false }) {
   const cooldown = useRefreshCooldown(REFRESH_COOLDOWN);
 
   const { data, error, isLoading, isValidating, mutate } = useSWR(
     "/api/prices",
     {
-      // dynamic refresh interval: 5 min if open, 10 min if closed
       refreshInterval: (latestData) => {
-        if (!latestData) return 300000; // default 5 min until first fetch
+        if (!latestData) return 300000;
         return latestData.marketOpen === false ? 600000 : 300000;
       },
       revalidateOnFocus: false,
@@ -88,25 +85,23 @@ export default function MarketPrices() {
   const marketOpen = data?.marketOpen !== false;
   const ttlMins = marketOpen ? "5 min" : "10 min";
 
-  // ── Sort / filter markets by type ─────────────────────────────────────
   const sortedMarkets = [...markets].sort((a, b) => {
-    const order = { crypto: 0, stock: 1, gold: 2 }; // priority
+    const order = { crypto: 0, stock: 1, gold: 2 };
     return (order[a.type] ?? 99) - (order[b.type] ?? 99);
   });
 
-  // ── Render market cards ───────────────────────────────────────────────
   const renderMarketCards = () =>
     isLoading
       ? Array.from({ length: SKELETON_COUNT }).map((_, i) => (
-          <PriceCardSkeleton key={i} />
+          <PriceCardSkeleton key={i} compact={compact} />
         ))
       : sortedMarkets.map((asset, i) => (
           <div
             key={asset.id}
             className="animate-fade-up"
-            style={{ animationDelay: `${i * 35}ms` }}
+            style={{ animationDelay: `${i * 25}ms` }}
           >
-            <PriceCard asset={asset} />
+            <PriceCard asset={asset} compact={compact} />
           </div>
         ));
 
@@ -118,29 +113,27 @@ export default function MarketPrices() {
 
   return (
     <section>
-      {/* Header */}
-      <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
-        <div className="flex items-center gap-3">
-          <h2 className="font-display text-2xl tracking-wider text-white">
-            MARKET PRICES
-          </h2>
-
-          <span className="flex items-center gap-1.5">
-            {isValidating ? (
-              <RefreshCw size={10} className="text-[#009E60] animate-spin" />
-            ) : (
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-60" />
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
-              </span>
-            )}
-            <span className="text-xs font-mono text-slate-500">
-              {isValidating ? "UPDATING" : "LIVE"}
+      {/* ── Compact status row (header is in pages/index.js) ─────── */}
+      <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+        <div className="flex items-center gap-2">
+          {isValidating ? (
+            <RefreshCw size={10} className="text-[#009E60] animate-spin" />
+          ) : (
+            <span className="relative flex h-1.5 w-1.5">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-60" />
+              <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500" />
             </span>
+          )}
+          <span className="text-[10px] font-mono text-slate-500 uppercase tracking-wider">
+            {isValidating ? "Updating" : "Live"}
+          </span>
+          <span className="text-slate-700">·</span>
+          <span className="text-[10px] font-mono text-slate-600">
+            {markets.length} assets
           </span>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           <AgeBadge
             timestamp={data?.timestamp}
             stale={isStale}
@@ -150,9 +143,8 @@ export default function MarketPrices() {
             onClick={handleRefresh}
             disabled={cooldown.onCooldown || isValidating}
             className={clsx(
-              "btn-ghost text-xs transition-all",
-              (cooldown.onCooldown || isValidating) &&
-                "opacity-40 cursor-not-allowed",
+              "inline-flex items-center gap-1 rounded-md px-2 py-1 text-[10px] font-mono text-slate-400 border border-white/8 hover:text-white hover:bg-white/5 transition-colors",
+              (cooldown.onCooldown || isValidating) && "opacity-40 cursor-not-allowed",
             )}
             title={
               cooldown.onCooldown
@@ -161,77 +153,68 @@ export default function MarketPrices() {
             }
           >
             <RefreshCw
-              size={12}
+              size={10}
               className={isValidating ? "animate-spin" : ""}
             />
             {cooldown.onCooldown
               ? `${cooldown.remaining}s`
               : isValidating
-                ? "Updating…"
+                ? "Updating"
                 : "Refresh"}
           </button>
         </div>
       </div>
 
-      {/* Market closed info */}
       {!marketOpen && !isLoading && markets.length > 0 && (
-        <div className="mb-4 flex items-center gap-2 text-xs text-slate-600 font-mono bg-white/[0.02] border border-white/5 rounded-lg px-3 py-2">
-          <Clock size={11} className="text-slate-700 shrink-0" />
+        <div className="mb-3 flex items-center gap-2 text-[11px] text-slate-600 font-mono bg-white/[0.02] border border-white/5 rounded-lg px-2.5 py-1.5">
+          <Clock size={10} className="text-slate-700 shrink-0" />
           <span>
-            US markets closed — stock prices won’t change until next session.
-            Cache refreshes every{" "}
+            US markets closed — stocks cached until next session. Refreshes every{" "}
             <span className="text-slate-500">{ttlMins}</span>.
           </span>
         </div>
       )}
 
-      {/* API error */}
       {hasErrors && !isLoading && (
-        <div className="mb-4 glass-card border-amber-500/20 px-4 py-2.5 flex items-start gap-2 text-xs text-amber-400/80">
-          <AlertTriangle size={13} className="mt-0.5 shrink-0 text-amber-400" />
+        <div className="mb-3 glass-card border-amber-500/20 px-3 py-2 flex items-start gap-2 text-[11px] text-amber-400/80">
+          <AlertTriangle size={11} className="mt-0.5 shrink-0 text-amber-400" />
           <div>
             <span className="font-semibold text-amber-400">
               Some data unavailable:
             </span>{" "}
-            {apiErrors.join(" • ")}.{" "}
-            <a
-              href="https://finnhub.io/register"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="underline hover:text-amber-300"
-            >
-              Get your free Finnhub key
-            </a>{" "}
-            and add it as{" "}
-            <code className="bg-white/10 rounded px-1">FINNHUB_KEY</code> in{" "}
-            <code className="bg-white/10 rounded px-1">.env.local</code>.
+            {apiErrors.join(" • ")}.
           </div>
         </div>
       )}
 
-      {/* Network error */}
       {error && (
-        <div className="glass-card-bear px-4 py-3 flex items-center gap-2 text-red-400 text-sm mb-4">
-          <Wifi size={14} />
+        <div className="glass-card-bear px-3 py-2 flex items-center gap-2 text-red-400 text-xs mb-3">
+          <Wifi size={12} />
           Failed to reach price API. Check your connection.
         </div>
       )}
 
-      {/* ── Price grid  */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-8 gap-3">
+      {/* Price grid — denser on compact */}
+      <div
+        className={clsx(
+          "grid gap-2",
+          compact
+            ? "grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-6"
+            : "grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-8 gap-3",
+        )}
+      >
         {renderMarketCards()}
       </div>
 
-      {/* Footer */}
       {markets.length > 0 && !isLoading && (
         <div className="mt-2 flex items-center justify-between">
-          <p className="text-[10px] text-slate-700 font-mono flex items-center gap-1.5">
-            <TrendingUp size={9} />
+          <p className="text-[9px] text-slate-700 font-mono flex items-center gap-1">
+            <TrendingUp size={8} />
             Auto-refresh every {ttlMins} · Server-cached
           </p>
           {data?.timestamp && (
-            <p className="text-[10px] text-slate-700 font-mono">
-              Last fetch: {new Date(data.timestamp).toLocaleTimeString()}
+            <p className="text-[9px] text-slate-700 font-mono">
+              {new Date(data.timestamp).toLocaleTimeString()}
             </p>
           )}
         </div>
