@@ -1,182 +1,141 @@
 /**
  * components/TimeZones/index.js
- * Live clocks for the three major trading sessions.
- * Header is rendered by the parent page; this component renders only the cards.
+ * Sidebar list of trading sessions. Compact rows with live status dot + time.
  */
 
 import { useEffect, useState } from "react";
-import { Clock } from "lucide-react";
 import clsx from "clsx";
 
 const MARKETS = [
   {
     id:       "new-york",
     city:     "New York",
+    code:     "NYC",
     timezone: "America/New_York",
-    exchange: "NYSE · NASDAQ",
-    flag:     "🇺🇸",
+    flag:     "US",
     open:     { h: 9,  m: 30 },
     close:    { h: 16, m: 0  },
     preOpen:  { h: 4,  m: 0  },
-    accent:   "arc",
   },
   {
     id:       "london",
     city:     "London",
+    code:     "LDN",
     timezone: "Europe/London",
-    exchange: "LSE · Forex",
-    flag:     "🇬🇧",
+    flag:     "UK",
     open:     { h: 8,  m: 0  },
     close:    { h: 16, m: 30 },
     preOpen:  { h: 7,  m: 0  },
-    accent:   "ember",
   },
   {
     id:       "tokyo",
     city:     "Tokyo",
+    code:     "TKY",
     timezone: "Asia/Tokyo",
-    exchange: "TSE · Nikkei",
-    flag:     "🇯🇵",
+    flag:     "JP",
     open:     { h: 9,  m: 0  },
     close:    { h: 15, m: 30 },
     preOpen:  { h: 8,  m: 0  },
-    accent:   "bull",
   },
 ];
 
-function nowIn(timezone) {
-  return new Date(new Date().toLocaleString("en-US", { timeZone: timezone }));
-}
-
-function formatTime(date) {
-  return date.toLocaleTimeString("en-US", {
-    hour:   "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-    hour12: true,
-  });
-}
-
-function formatDate(date) {
-  return date.toLocaleDateString("en-US", {
-    weekday: "short",
-    day:     "2-digit",
-    month:   "short",
-  });
+function nowIn(tz) {
+  return new Date(new Date().toLocaleString("en-US", { timeZone: tz }));
 }
 
 function getSessionStatus(date, market) {
   const day = date.getDay();
   if (day === 0 || day === 6) return "closed";
-  const h = date.getHours();
-  const m = date.getMinutes();
-  const nowMinutes = h * 60 + m;
-  const openMinutes  = market.open.h  * 60 + market.open.m;
-  const closeMinutes = market.close.h * 60 + market.close.m;
-  const preMinutes   = market.preOpen.h * 60 + market.preOpen.m;
-  if (nowMinutes >= openMinutes && nowMinutes < closeMinutes) return "open";
-  if (nowMinutes >= preMinutes  && nowMinutes < openMinutes)  return "pre";
+  const nowMin = date.getHours() * 60 + date.getMinutes();
+  const openMin  = market.open.h  * 60 + market.open.m;
+  const closeMin = market.close.h * 60 + market.close.m;
+  const preMin   = market.preOpen.h * 60 + market.preOpen.m;
+  if (nowMin >= openMin && nowMin < closeMin) return "open";
+  if (nowMin >= preMin  && nowMin < openMin)  return "pre";
   return "closed";
 }
 
-function StatusBadge({ status }) {
-  const cfg = {
-    open:   { label: "OPEN",   className: "text-emerald-400 bg-emerald-400/10 border-emerald-400/25" },
-    pre:    { label: "PRE",    className: "text-amber-400  bg-amber-400/10  border-amber-400/25"  },
-    closed: { label: "CLOSED", className: "text-slate-500  bg-white/5       border-white/10"       },
+function getNextChange(date, market) {
+  const nowMin = date.getHours() * 60 + date.getMinutes();
+  const openMin  = market.open.h  * 60 + market.open.m;
+  const closeMin = market.close.h * 60 + market.close.m;
+  const preMin   = market.preOpen.h * 60 + market.preOpen.m;
+  if (nowMin < preMin)   return { to: "pre",   at: preMin };
+  if (nowMin < openMin)  return { to: "open",  at: openMin };
+  if (nowMin < closeMin) return { to: "close", at: closeMin };
+  return null;
+}
+
+function fmtTime(date) {
+  return date.toLocaleTimeString("en-US", {
+    hour: "2-digit", minute: "2-digit", second: "2-digit",
+    hour12: false, timeZone: undefined,
+  });
+}
+
+function SessionRow({ market, time }) {
+  if (!time) {
+    return (
+      <div className="px-4 py-3 border-b border-white/5 animate-pulse">
+        <div className="h-3 w-20 bg-white/5 rounded" />
+        <div className="h-2 w-12 bg-white/5 rounded mt-2" />
+      </div>
+    );
+  }
+
+  const status = getSessionStatus(time, market);
+  const next = getNextChange(time, market);
+  const timeStr = fmtTime(time);
+
+  const statusColor = {
+    open:   "bg-[#009E60]",
+    pre:    "bg-amber-400",
+    closed: "bg-slate-600",
+  }[status];
+
+  const statusLabel = {
+    open:   "Open",
+    pre:    "Pre",
+    closed: "Closed",
   }[status];
 
   return (
-    <span className={clsx("text-[9px] font-mono px-1.5 py-0.5 rounded border", cfg.className)}>
-      {cfg.label}
-    </span>
-  );
-}
-
-const ACCENT_CARD = {
-  arc:   "glass-card-arc",
-  ember: "glass-card-ember",
-  bull:  "glass-card-bull",
-};
-
-const ACCENT_TIME = {
-  arc:   "text-[#009E60]",
-  ember: "text-[#f59e0b]",
-  bull:  "text-emerald-400",
-};
-
-function ClockCard({ market, times }) {
-  const localDate = times[market.id];
-  if (!localDate) return null;
-
-  const status  = getSessionStatus(localDate, market);
-  const timeStr = formatTime(localDate);
-  const dateStr = formatDate(localDate);
-
-  return (
-    <div className={clsx("p-3 flex flex-col gap-2", ACCENT_CARD[market.accent])}>
-      <div className="flex items-start justify-between gap-1">
-        <div className="flex items-center gap-2 min-w-0">
-          <span className="text-base">{market.flag}</span>
-          <div className="min-w-0">
-            <p className="text-white font-semibold text-xs leading-none truncate">{market.city}</p>
-            <p className="text-slate-500 text-[10px] mt-0.5 truncate">{market.exchange}</p>
-          </div>
-        </div>
-        <StatusBadge status={status} />
-      </div>
-
-      <div>
-        <p className={clsx("font-mono font-bold leading-none tracking-tight", ACCENT_TIME[market.accent], "text-lg")}>
-          {timeStr.split(":").slice(0, 2).join(":")}
-          <span className="text-slate-500 text-sm">
-            :{timeStr.split(":")[2]}
+    <div className="px-4 py-3 border-b border-white/5 hover:bg-white/[0.02] transition-colors">
+      <div className="flex items-center justify-between mb-1">
+        <div className="flex items-center gap-2">
+          <div className={clsx("w-1.5 h-1.5 rounded-full", statusColor, status === "open" && "animate-pulse")} />
+          <span className="font-mono text-[11px] font-bold text-white tracking-wider">
+            {market.code}
           </span>
-        </p>
-        <p className="text-slate-600 font-mono text-[10px] mt-1">{dateStr}</p>
+          <span className="font-mono text-[9px] uppercase tracking-widest text-slate-600">
+            {market.city}
+          </span>
+        </div>
+        <span className={clsx(
+          "font-mono text-[9px] uppercase tracking-widest font-semibold",
+          status === "open"   && "text-[#009E60]",
+          status === "pre"    && "text-amber-400",
+          status === "closed" && "text-slate-600",
+        )}>
+          {statusLabel}
+        </span>
       </div>
-
-      {status !== "closed" && (
-        <SessionBar date={localDate} market={market} status={status} accent={market.accent} />
-      )}
+      <div className="flex items-end justify-between">
+        <span className="font-mono text-base font-bold text-white tabular-nums leading-none">
+          {timeStr.slice(0, 5)}
+          <span className="text-slate-500 text-sm">:{timeStr.slice(5)}</span>
+        </span>
+        {next && status !== "closed" && (
+          <span className="font-mono text-[9px] text-slate-600 uppercase tracking-widest">
+            → {next.to === "open" ? "Open" : next.to === "close" ? "Close" : "Pre"}
+          </span>
+        )}
+      </div>
     </div>
   );
 }
 
-function SessionBar({ date, market, status, accent }) {
-  const h = date.getHours();
-  const m = date.getMinutes();
-  const nowMin = h * 60 + m;
-
-  const startMin = status === "pre"
-    ? market.preOpen.h  * 60 + market.preOpen.m
-    : market.open.h     * 60 + market.open.m;
-  const endMin   = market.close.h * 60 + market.close.m;
-
-  const pct = Math.min(100, Math.max(0, ((nowMin - startMin) / (endMin - startMin)) * 100));
-
-  const barColor = {
-    arc:   "bg-[#009E60]",
-    ember: "bg-[#f59e0b]",
-    bull:  "bg-emerald-400",
-  }[accent];
-
-  return (
-    <div className="space-y-1">
-      <div className="h-0.5 rounded-full bg-white/5 overflow-hidden">
-        <div
-          className={clsx("h-full rounded-full transition-all duration-1000", barColor)}
-          style={{ width: `${pct}%` }}
-        />
-      </div>
-      <p className="text-slate-600 text-[9px] font-mono">
-        {status === "pre" ? "Pre-market" : "Session"} · {pct.toFixed(0)}%
-      </p>
-    </div>
-  );
-}
-
-export default function TimeZones({ compact = false }) {
+export default function TimeZones() {
   const [times, setTimes] = useState({});
 
   useEffect(() => {
@@ -186,25 +145,14 @@ export default function TimeZones({ compact = false }) {
       setTimes(updated);
     };
     tick();
-    const interval = setInterval(tick, 1000);
-    return () => clearInterval(interval);
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
   }, []);
 
   return (
-    <div
-      className={clsx(
-        "grid gap-2",
-        compact ? "grid-cols-1" : "grid-cols-1 sm:grid-cols-3",
-      )}
-    >
-      {MARKETS.map((market, i) => (
-        <div
-          key={market.id}
-          className="animate-fade-up"
-          style={{ animationDelay: `${i * 60}ms` }}
-        >
-          <ClockCard market={market} times={times} />
-        </div>
+    <div>
+      {MARKETS.map((market) => (
+        <SessionRow key={market.id} market={market} time={times[market.id]} />
       ))}
     </div>
   );

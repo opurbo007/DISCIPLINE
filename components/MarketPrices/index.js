@@ -1,4 +1,9 @@
-import { useState, useEffect } from "react";
+/**
+ * components/MarketPrices/index.js
+ * Terminal-style market data table. Dense rows, no cards, monospace everything.
+ */
+
+import { useState, useEffect, useRef } from "react";
 import useSWR from "swr";
 import {
   RefreshCw,
@@ -6,77 +11,169 @@ import {
   Wifi,
   Clock,
   TrendingUp,
+  TrendingDown,
 } from "lucide-react";
-import PriceCard, { PriceCardSkeleton } from "./PriceCard";
 import clsx from "clsx";
 
-const SKELETON_COUNT = 8;
 const REFRESH_COOLDOWN = 30;
 
 function useRefreshCooldown(seconds) {
   const [remaining, setRemaining] = useState(0);
   const start = () => setRemaining(seconds);
-
   useEffect(() => {
     if (remaining <= 0) return;
     const id = setInterval(() => setRemaining((n) => Math.max(0, n - 1)), 1000);
     return () => clearInterval(id);
   }, [remaining]);
-
   return { remaining, onCooldown: remaining > 0, start };
 }
 
-function AgeBadge({ timestamp, stale, marketOpen }) {
-  const [ageText, setAgeText] = useState("");
+function fmtPrice(price) {
+  if (price === null || price === undefined) return "—";
+  const abs = Math.abs(price);
+  if (abs >= 10000) return price.toLocaleString("en-US", { maximumFractionDigits: 0 });
+  if (abs >= 1000)  return price.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  if (abs >= 1)     return price.toFixed(2);
+  return price.toFixed(4);
+}
 
+function pricePrefix(cat) {
+  return ["crypto", "index", "bond", "commodity"].includes(cat) ? "$" : "";
+}
+
+const CATEGORY_LABEL = {
+  crypto:    "CRY",
+  index:     "IDX",
+  forex:     "FX",
+  bond:      "BND",
+  commodity: "CMD",
+};
+
+// ── Flash effect: highlight price changes ─────────────────────────────────────
+function useFlash(value) {
+  const [flash, setFlash] = useState(null);
+  const prev = useRef(value);
   useEffect(() => {
-    if (!timestamp) return;
-    const update = () => {
-      const secs = Math.round((Date.now() - new Date(timestamp)) / 1000);
-      if (secs < 10) return setAgeText("just now");
-      if (secs < 60) return setAgeText(`${secs}s ago`);
-      return setAgeText(`${Math.floor(secs / 60)}m ${secs % 60}s ago`);
-    };
-    update();
-    const id = setInterval(update, 5000);
-    return () => clearInterval(id);
-  }, [timestamp]);
+    if (prev.current === null || prev.current === value) {
+      prev.current = value;
+      return;
+    }
+    const dir = value > prev.current ? "up" : "down";
+    prev.current = value;
+    setFlash(dir);
+    const id = setTimeout(() => setFlash(null), 600);
+    return () => clearTimeout(id);
+  }, [value]);
+  return flash;
+}
 
-  if (!ageText) return null;
+function PriceRow({ asset }) {
+  const flash = useFlash(asset.price);
+
+  const isPos = asset.change24h > 0;
+  const isNeg = asset.change24h < 0;
 
   return (
-    <div className="flex items-center gap-1.5">
-      {stale && (
-        <span className="text-[9px] font-mono text-amber-500/70 bg-amber-500/10 border border-amber-500/20 px-1.5 py-0.5 rounded">
-          STALE
-        </span>
+    <div
+      className={clsx(
+        "grid grid-cols-[40px_1fr_120px_100px] sm:grid-cols-[50px_1fr_140px_120px_80px] gap-3 items-center px-4 py-2.5 border-b border-white/5 hover:bg-white/[0.02] transition-colors",
+        flash === "up"   && "bg-emerald-400/5",
+        flash === "down" && "bg-red-400/5",
       )}
-      {!marketOpen && (
-        <span className="text-[9px] font-mono text-slate-600 bg-white/5 border border-white/8 px-1.5 py-0.5 rounded flex items-center gap-1">
-          <Clock size={8} />
-          MKT CLOSED
-        </span>
-      )}
-      <span className="text-[10px] text-slate-600 font-mono">{ageText}</span>
+    >
+      {/* Icon */}
+      <div className="w-8 h-8 rounded bg-white/5 border border-white/10 flex items-center justify-center font-mono text-sm font-bold text-slate-300">
+        {asset.icon}
+      </div>
+
+      {/* Symbol + name */}
+      <div className="min-w-0">
+        <div className="flex items-center gap-2">
+          <span className="font-mono text-[12px] font-bold text-white tracking-wider">
+            {asset.symbol}
+          </span>
+          <span className="font-mono text-[9px] uppercase tracking-widest text-slate-600 px-1 border border-white/10">
+            {CATEGORY_LABEL[asset.category] || asset.category}
+          </span>
+        </div>
+        <p className="font-mono text-[10px] text-slate-600 mt-0.5 truncate">{asset.name}</p>
+      </div>
+
+      {/* Price */}
+      <div className="text-right">
+        <p className="font-mono text-sm font-bold text-white tabular-nums">
+          {pricePrefix(asset.category)}{fmtPrice(asset.price)}
+        </p>
+      </div>
+
+      {/* Change */}
+      <div className="text-right">
+        <p className={clsx(
+          "font-mono text-[12px] font-semibold tabular-nums flex items-center justify-end gap-1",
+          isPos && "text-emerald-400",
+          isNeg && "text-red-400",
+          !isPos && !isNeg && "text-slate-500",
+        )}>
+          {isPos ? <TrendingUp size={10} /> : isNeg ? <TrendingDown size={10} /> : null}
+          {isPos ? "+" : ""}{asset.change24h.toFixed(2)}%
+        </p>
+      </div>
+
+      {/* Sparkline placeholder slot (right column on sm+) */}
+      <div className="hidden sm:flex items-center justify-end">
+        <Sparkline positive={isPos} negative={isNeg} />
+      </div>
     </div>
   );
 }
 
-export default function MarketPrices({ compact = false }) {
+function Sparkline({ positive, negative }) {
+  // Deterministic fake sparkline from a small seeded pattern
+  const points = positive
+    ? "0,20 10,18 20,15 30,12 40,14 50,8 60,5 70,7 80,3 90,2 100,0"
+    : negative
+    ? "0,2 10,5 20,4 30,8 40,6 50,10 60,12 70,14 80,16 90,18 100,20"
+    : "0,10 10,11 20,9 30,10 40,11 50,10 60,9 70,10 80,11 90,10 100,10";
+  const color = positive ? "#009E60" : negative ? "#ef4444" : "#475569";
+  return (
+    <svg width="60" height="20" viewBox="0 0 100 20" preserveAspectRatio="none">
+      <polyline
+        fill="none"
+        stroke={color}
+        strokeWidth="1.5"
+        points={points}
+      />
+    </svg>
+  );
+}
+
+function SkeletonRow() {
+  return (
+    <div className="grid grid-cols-[40px_1fr_120px_100px] sm:grid-cols-[50px_1fr_140px_120px_80px] gap-3 items-center px-4 py-2.5 border-b border-white/5">
+      <div className="w-8 h-8 rounded shimmer-bg" />
+      <div className="space-y-1.5">
+        <div className="h-3 w-16 rounded shimmer-bg" />
+        <div className="h-2 w-24 rounded shimmer-bg" />
+      </div>
+      <div className="h-4 w-20 rounded shimmer-bg ml-auto" />
+      <div className="h-3 w-14 rounded shimmer-bg ml-auto" />
+      <div className="hidden sm:block h-4 w-14 rounded shimmer-bg ml-auto" />
+    </div>
+  );
+}
+
+export default function MarketPrices() {
   const cooldown = useRefreshCooldown(REFRESH_COOLDOWN);
 
-  const { data, error, isLoading, isValidating, mutate } = useSWR(
-    "/api/prices",
-    {
-      refreshInterval: (latestData) => {
-        if (!latestData) return 300000;
-        return latestData.marketOpen === false ? 600000 : 300000;
-      },
-      revalidateOnFocus: false,
-      revalidateOnReconnect: false,
-      keepPreviousData: true,
+  const { data, error, isLoading, isValidating, mutate } = useSWR("/api/prices", {
+    refreshInterval: (latestData) => {
+      if (!latestData) return 300000;
+      return latestData.marketOpen === false ? 600000 : 300000;
     },
-  );
+    revalidateOnFocus: false,
+    revalidateOnReconnect: false,
+    keepPreviousData: true,
+  });
 
   const markets = data?.markets || [];
   const apiErrors = data?.errors || [];
@@ -85,25 +182,14 @@ export default function MarketPrices({ compact = false }) {
   const marketOpen = data?.marketOpen !== false;
   const ttlMins = marketOpen ? "5 min" : "10 min";
 
-  const sortedMarkets = [...markets].sort((a, b) => {
-    const order = { crypto: 0, stock: 1, gold: 2 };
-    return (order[a.type] ?? 99) - (order[b.type] ?? 99);
-  });
-
-  const renderMarketCards = () =>
-    isLoading
-      ? Array.from({ length: SKELETON_COUNT }).map((_, i) => (
-          <PriceCardSkeleton key={i} compact={compact} />
-        ))
-      : sortedMarkets.map((asset, i) => (
-          <div
-            key={asset.id}
-            className="animate-fade-up"
-            style={{ animationDelay: `${i * 25}ms` }}
-          >
-            <PriceCard asset={asset} compact={compact} />
-          </div>
-        ));
+  // Group by category for visual separation
+  const groups = {
+    crypto:    markets.filter(m => m.category === "crypto"),
+    index:     markets.filter(m => m.category === "index"),
+    commodity: markets.filter(m => m.category === "commodity"),
+    bond:      markets.filter(m => m.category === "bond"),
+    forex:     markets.filter(m => m.category === "forex"),
+  };
 
   const handleRefresh = () => {
     if (cooldown.onCooldown) return;
@@ -111,114 +197,117 @@ export default function MarketPrices({ compact = false }) {
     mutate();
   };
 
+  const lastUpdate = data?.timestamp ? new Date(data.timestamp) : null;
+  const lastUpdateStr = lastUpdate?.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false });
+
   return (
-    <section>
-      {/* ── Compact status row (header is in pages/index.js) ─────── */}
-      <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
-        <div className="flex items-center gap-2">
-          {isValidating ? (
-            <RefreshCw size={10} className="text-[#009E60] animate-spin" />
-          ) : (
-            <span className="relative flex h-1.5 w-1.5">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-60" />
-              <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500" />
+    <div>
+      {/* ── Status bar (Bloomberg header) ──────────────────────────── */}
+      <div className="flex items-center justify-between px-4 py-2 bg-white/[0.02] border-b border-white/10">
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1.5">
+            {isValidating ? (
+              <RefreshCw size={10} className="text-[#009E60] animate-spin" />
+            ) : (
+              <div className="w-1.5 h-1.5 rounded-full bg-[#009E60] animate-pulse" />
+            )}
+            <span className="font-mono text-[10px] uppercase tracking-widest text-[#009E60] font-semibold">
+              {isValidating ? "Syncing" : "Live"}
+            </span>
+          </div>
+          <span className="font-mono text-[10px] text-slate-600 uppercase tracking-widest">
+            {markets.length} instruments
+          </span>
+          {!marketOpen && (
+            <span className="font-mono text-[10px] text-amber-400/80 uppercase tracking-widest flex items-center gap-1">
+              <Clock size={9} /> Mkt Closed
             </span>
           )}
-          <span className="text-[10px] font-mono text-slate-500 uppercase tracking-wider">
-            {isValidating ? "Updating" : "Live"}
-          </span>
-          <span className="text-slate-700">·</span>
-          <span className="text-[10px] font-mono text-slate-600">
-            {markets.length} assets
-          </span>
+          {isStale && (
+            <span className="font-mono text-[10px] text-amber-500 uppercase tracking-widest">
+              Stale
+            </span>
+          )}
         </div>
 
-        <div className="flex items-center gap-2">
-          <AgeBadge
-            timestamp={data?.timestamp}
-            stale={isStale}
-            marketOpen={marketOpen}
-          />
+        <div className="flex items-center gap-3">
+          {lastUpdateStr && (
+            <span className="font-mono text-[10px] text-slate-600 tabular-nums uppercase tracking-widest">
+              {lastUpdateStr}
+            </span>
+          )}
           <button
             onClick={handleRefresh}
             disabled={cooldown.onCooldown || isValidating}
             className={clsx(
-              "inline-flex items-center gap-1 rounded-md px-2 py-1 text-[10px] font-mono text-slate-400 border border-white/8 hover:text-white hover:bg-white/5 transition-colors",
+              "font-mono text-[10px] uppercase tracking-widest px-2 py-1 border border-white/10 text-slate-400 hover:text-white hover:border-white/20 transition-colors flex items-center gap-1.5",
               (cooldown.onCooldown || isValidating) && "opacity-40 cursor-not-allowed",
             )}
-            title={
-              cooldown.onCooldown
-                ? `Please wait ${cooldown.remaining}s`
-                : "Refresh prices"
-            }
           >
-            <RefreshCw
-              size={10}
-              className={isValidating ? "animate-spin" : ""}
-            />
-            {cooldown.onCooldown
-              ? `${cooldown.remaining}s`
-              : isValidating
-                ? "Updating"
-                : "Refresh"}
+            <RefreshCw size={9} className={isValidating ? "animate-spin" : ""} />
+            {cooldown.onCooldown ? `${cooldown.remaining}s` : "Refresh"}
           </button>
         </div>
       </div>
 
-      {!marketOpen && !isLoading && markets.length > 0 && (
-        <div className="mb-3 flex items-center gap-2 text-[11px] text-slate-600 font-mono bg-white/[0.02] border border-white/5 rounded-lg px-2.5 py-1.5">
-          <Clock size={10} className="text-slate-700 shrink-0" />
-          <span>
-            US markets closed — stocks cached until next session. Refreshes every{" "}
-            <span className="text-slate-500">{ttlMins}</span>.
-          </span>
-        </div>
-      )}
-
-      {hasErrors && !isLoading && (
-        <div className="mb-3 glass-card border-amber-500/20 px-3 py-2 flex items-start gap-2 text-[11px] text-amber-400/80">
-          <AlertTriangle size={11} className="mt-0.5 shrink-0 text-amber-400" />
-          <div>
-            <span className="font-semibold text-amber-400">
-              Some data unavailable:
-            </span>{" "}
-            {apiErrors.join(" • ")}.
-          </div>
-        </div>
-      )}
-
-      {error && (
-        <div className="glass-card-bear px-3 py-2 flex items-center gap-2 text-red-400 text-xs mb-3">
-          <Wifi size={12} />
-          Failed to reach price API. Check your connection.
-        </div>
-      )}
-
-      {/* Price grid — denser on compact */}
-      <div
-        className={clsx(
-          "grid gap-2",
-          compact
-            ? "grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-6"
-            : "grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-8 gap-3",
-        )}
-      >
-        {renderMarketCards()}
+      {/* ── Column headers ─────────────────────────────────────────── */}
+      <div className="hidden sm:grid grid-cols-[50px_1fr_140px_120px_80px] gap-3 px-4 py-2 border-b border-white/10 bg-black">
+        <span className="font-mono text-[9px] uppercase tracking-widest text-slate-600">Sym</span>
+        <span className="font-mono text-[9px] uppercase tracking-widest text-slate-600">Instrument</span>
+        <span className="font-mono text-[9px] uppercase tracking-widest text-slate-600 text-right">Last</span>
+        <span className="font-mono text-[9px] uppercase tracking-widest text-slate-600 text-right">24h Δ</span>
+        <span className="font-mono text-[9px] uppercase tracking-widest text-slate-600 text-right">Trend</span>
       </div>
 
-      {markets.length > 0 && !isLoading && (
-        <div className="mt-2 flex items-center justify-between">
-          <p className="text-[9px] text-slate-700 font-mono flex items-center gap-1">
-            <TrendingUp size={8} />
-            Auto-refresh every {ttlMins} · Server-cached
-          </p>
-          {data?.timestamp && (
-            <p className="text-[9px] text-slate-700 font-mono">
-              {new Date(data.timestamp).toLocaleTimeString()}
-            </p>
-          )}
+      {/* ── Error / status banners ─────────────────────────────────── */}
+      {hasErrors && !isLoading && (
+        <div className="mx-4 mt-3 flex items-start gap-2 text-[11px] text-amber-400/80 bg-amber-400/5 border border-amber-400/20 px-3 py-2">
+          <AlertTriangle size={11} className="mt-0.5 shrink-0 text-amber-400" />
+          <span className="font-mono">{apiErrors.join(" • ")}</span>
         </div>
       )}
-    </section>
+      {error && (
+        <div className="mx-4 mt-3 flex items-center gap-2 text-red-400 text-xs bg-red-400/5 border border-red-400/20 px-3 py-2">
+          <Wifi size={12} />
+          <span className="font-mono">Failed to reach price API. Check your connection.</span>
+        </div>
+      )}
+
+      {/* ── Grouped data rows ──────────────────────────────────────── */}
+      <div>
+        {isLoading ? (
+          Array.from({ length: 12 }).map((_, i) => <SkeletonRow key={i} />)
+        ) : (
+          Object.entries(groups).map(([cat, items]) =>
+            items.length === 0 ? null : (
+              <div key={cat}>
+                <div className="px-4 py-1.5 bg-white/[0.015] border-b border-white/5 flex items-center gap-2">
+                  <span className="font-mono text-[9px] uppercase tracking-widest text-slate-500 font-semibold">
+                    {cat === "index" ? "Indices" :
+                     cat === "crypto" ? "Crypto" :
+                     cat === "commodity" ? "Commodities" :
+                     cat === "bond" ? "Bonds" :
+                     cat === "forex" ? "Forex" : cat}
+                  </span>
+                  <span className="font-mono text-[9px] text-slate-700">·</span>
+                  <span className="font-mono text-[9px] text-slate-700">{items.length}</span>
+                </div>
+                {items.map((asset) => <PriceRow key={asset.id} asset={asset} />)}
+              </div>
+            ),
+          )
+        )}
+      </div>
+
+      {/* ── Footer ─────────────────────────────────────────────────── */}
+      <div className="px-4 py-2 border-t border-white/10 flex items-center justify-between bg-white/[0.01]">
+        <p className="font-mono text-[9px] text-slate-700 uppercase tracking-widest">
+          Auto-refresh · {ttlMins} · Server-cached
+        </p>
+        <p className="font-mono text-[9px] text-slate-700 uppercase tracking-widest">
+          Source: CoinGecko + Finnhub + ECB
+        </p>
+      </div>
+    </div>
   );
 }

@@ -1,8 +1,16 @@
+/**
+ * components/Layout.js
+ * Terminal / Bloomberg-inspired shell.
+ *   - Sharp 1px borders instead of glass blur
+ *   - Ticker tape across the top
+ *   - 3-zone main: optional left rail (page sidebar), center, optional right rail
+ */
+
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { useSession, signOut } from "next-auth/react";
-// import useSWR from "swr";
+import useSWR from "swr";
 import {
   BarChart2,
   Wifi,
@@ -13,113 +21,79 @@ import {
   LayoutDashboard,
   ChevronDown as ChevronDownIcon,
   BookOpen,
+  Activity,
 } from "lucide-react";
 import clsx from "clsx";
 
-// ── Price formatter ───────────────────────────────────────────────────────────
-// function fmtPrice(price) {
-//   if (price >= 10000)
-//     return `$${price.toLocaleString("en-US", { maximumFractionDigits: 0 })}`;
-//   if (price >= 1000)
-//     return `$${price.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-//   if (price >= 1) return `$${price.toFixed(2)}`;
-//   return `$${price.toFixed(4)}`;
-// }
+// ── Price formatter (terminal style) ──────────────────────────────────────────
+function fmtPrice(price) {
+  if (price >= 10000) return price.toLocaleString("en-US", { maximumFractionDigits: 0 });
+  if (price >= 1000)  return price.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  if (price >= 1)     return price.toFixed(2);
+  return price.toFixed(4);
+}
 
-// ── Ticker tape ───────────────────────────────────────────────────────────────
-// function TickerTape() {
-//   // Use the same SWR key as MarketPrices — Next.js/SWR deduplicates this,
-//   // so there is only ONE /api/prices request shared between the ticker and
-//   // the price grid, no matter how many components use this hook.
-//   const { data } = useSWR("/api/prices", {
-//     refreshInterval:      120_000, // 2 min — matches MarketPrices component
-//     revalidateOnFocus:    false,
-//     revalidateOnReconnect: false,
-//   });
-//   const markets = data?.markets || [];
+// ── Ticker tape (Bloomberg top strip) ─────────────────────────────────────────
+function TickerTape() {
+  const { data } = useSWR("/api/prices", {
+    refreshInterval: 120_000,
+    revalidateOnFocus: false,
+    revalidateOnReconnect: false,
+  });
+  const markets = data?.markets || [];
 
-//   if (markets.length === 0) return (
-//     <div className="h-9 border-b border-white/5 bg-black/50 backdrop-blur-sm" />
-//   );
+  if (markets.length === 0) {
+    return <div className="h-8 border-b border-white/10 bg-black" />;
+  }
 
-//   // Triplicate for a seamless infinite loop with no gap
-//   const items = [...markets, ...markets, ...markets];
+  // Triplicate for seamless infinite scroll
+  const items = [...markets, ...markets, ...markets];
 
-//   return (
-//     <div
-//       className="relative overflow-hidden border-b border-white/[0.06] bg-black/50 backdrop-blur-sm"
-//       style={{ height: "36px" }}
-//     >
-//       {/* ── Left fade mask ───────────────────────────────────────────── */}
-//       <div
-//         className="pointer-events-none absolute left-0 top-0 bottom-0 w-20 z-10"
-//         style={{ background: "linear-gradient(to right, rgba(4,8,15,0.95), transparent)" }}
-//       />
-//       {/* ── Right fade mask ──────────────────────────────────────────── */}
-//       <div
-//         className="pointer-events-none absolute right-0 top-0 bottom-0 w-20 z-10"
-//         style={{ background: "linear-gradient(to left, rgba(4,8,15,0.95), transparent)" }}
-//       />
+  return (
+    <div className="relative h-8 border-b border-white/10 bg-black overflow-hidden">
+      {/* Fade masks */}
+      <div className="pointer-events-none absolute left-0 top-0 bottom-0 w-20 z-10"
+           style={{ background: "linear-gradient(to right, #000, transparent)" }} />
+      <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-20 z-10"
+           style={{ background: "linear-gradient(to left, #000, transparent)" }} />
 
-//       {/* ── Scrolling strip ──────────────────────────────────────────── */}
-//       <div
-//         className="ticker-inner absolute top-0 left-0 flex items-center h-full gap-0"
-//         style={{ willChange: "transform" }}
-//       >
-//         {items.map((asset, i) => {
-//           const positive = asset.change24h > 0;
-//           const negative = asset.change24h < 0;
+      <div className="ticker-inner absolute top-0 left-0 flex items-center h-full">
+        {items.map((asset, i) => {
+          const positive = asset.change24h > 0;
+          const negative = asset.change24h < 0;
+          return (
+            <span key={`${asset.id}-${i}`} className="flex items-center h-full shrink-0">
+              <span className="flex items-center gap-2 px-4">
+                <span className="font-mono text-[11px] font-bold text-slate-400 tracking-wider">
+                  {asset.symbol}
+                </span>
+                <span className="font-mono text-[11px] font-bold text-white tabular-nums">
+                  {fmtPrice(asset.price)}
+                </span>
+                <span className={clsx(
+                  "font-mono text-[10px] font-semibold tabular-nums",
+                  positive && "text-emerald-400",
+                  negative && "text-red-400",
+                  !positive && !negative && "text-slate-500",
+                )}>
+                  {positive ? "▲" : negative ? "▼" : "•"} {Math.abs(asset.change24h).toFixed(2)}%
+                </span>
+              </span>
+              <span className="w-px h-3 bg-white/10" />
+            </span>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
 
-//           return (
-//             <span
-//               key={`${asset.id}-${i}`}
-//               className="flex items-center shrink-0 h-full"
-//             >
-//               {/* ── Asset pill ───────────────────────────────────────── */}
-//               <span className="flex items-center gap-2.5 px-5">
-//                 {/* Symbol */}
-//                 <span className="font-mono text-[11px] font-bold tracking-widest text-slate-400 uppercase">
-//                   {asset.symbol}
-//                 </span>
-
-//                 {/* Price */}
-//                 <span className="font-mono text-[12px] font-bold text-white tabular-nums">
-//                   {fmtPrice(asset.price)}
-//                 </span>
-
-//                 {/* Change badge */}
-//                 <span
-//                   className={clsx(
-//                     "inline-flex items-center gap-0.5 font-mono text-[10px] font-semibold",
-//                     "px-1.5 py-0.5 rounded",
-//                     positive && "text-emerald-400 bg-emerald-400/10",
-//                     negative && "text-red-400 bg-red-400/10",
-//                     !positive && !negative && "text-slate-600 bg-white/5"
-//                   )}
-//                 >
-//                   {positive ? "+" : ""}{asset.change24h.toFixed(2)}%
-//                 </span>
-//               </span>
-
-//               {/* ── Vertical separator ───────────────────────────────── */}
-//               <span
-//                 className="shrink-0 w-px h-3.5 rounded-full"
-//                 style={{ background: "rgba(255,255,255,0.07)" }}
-//               />
-//             </span>
-//           );
-//         })}
-//       </div>
-//     </div>
-//   );
-// }
-
-// ── Navigation bar ────────────────────────────────────────────────────────────
-function Navbar({ activePage }) {
+// ── Top bar (terminal header) ─────────────────────────────────────────────────
+function TopBar({ activePage }) {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const [online, setOnline] = useState(true);
-  const [time, setTime] = useState("");
+  const [online, setOnline]     = useState(true);
+  const [time, setTime]         = useState("");
   const [userMenuOpen, setUserMenuOpen] = useState(false);
 
   useEffect(() => {
@@ -140,7 +114,6 @@ function Navbar({ activePage }) {
           minute: "2-digit",
           second: "2-digit",
           hour12: false,
-          timeZoneName: "short",
         }),
       );
     };
@@ -161,251 +134,197 @@ function Navbar({ activePage }) {
   ];
 
   return (
-    <header className="fixed top-0 left-0 w-full z-50 border-b border-white/5 bg-black/60 backdrop-blur-xl">
-      <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between gap-4">
-        {/* ── Left: branding + nav ─────────────────────────────────── */}
-        <div className="flex items-center gap-6">
-          {/* Logo */}
-          <Link href="/" className="flex items-center gap-2.5 shrink-0">
-            <div
-              className="w-8 h-8 rounded-lg flex items-center justify-center"
-              style={{
-                background:
-                  "linear-gradient(135deg, rgba(0,158,96,0.25), rgba(0,158,96,0.05))",
-                border: "1px solid rgba(0,158,96,0.35)",
-                boxShadow: "0 0 12px rgba(0,158,96,0.2)",
-              }}
+    <header className="sticky top-0 z-50 border-b border-white/10 bg-black/95 backdrop-blur-sm">
+      <div className="flex items-stretch h-12">
+        {/* ── Brand block ─────────────────────────────────────────── */}
+        <Link href="/" className="flex items-center gap-2.5 px-4 border-r border-white/10 shrink-0">
+          <div className="w-7 h-7 rounded bg-[#009E60] flex items-center justify-center">
+            <BarChart2 size={14} className="text-black" strokeWidth={2.5} />
+          </div>
+          <div className="hidden sm:block">
+            <p className="font-mono text-white text-[11px] font-bold tracking-widest leading-none">
+              TRADING DISCIPLINE
+            </p>
+            <p className="text-[9px] text-slate-500 font-mono leading-none mt-0.5 tracking-widest">
+              TERMINAL v1.0
+            </p>
+          </div>
+        </Link>
+
+        {/* ── Nav tabs ───────────────────────────────────────────── */}
+        <nav className="flex items-stretch">
+          {navLinks.map(({ href, label, key }) => (
+            <Link
+              key={key}
+              href={href}
+              className={clsx(
+                "flex items-center gap-1.5 px-4 border-r border-white/10 font-mono text-[11px] font-semibold tracking-widest uppercase transition-colors",
+                activePage === key
+                  ? "bg-[#009E60]/10 text-[#009E60]"
+                  : "text-slate-500 hover:text-white hover:bg-white/5",
+              )}
             >
-              <BarChart2 size={15} className="text-[#009E60]" />
-            </div>
-            <div className="hidden sm:block">
-              <p className="font-display text-white text-lg tracking-widest leading-none">
-                TRADING DISCIPLINE
-              </p>
-              <p className="text-[10px] text-slate-600 font-mono leading-none mt-0.5 tracking-wider">
-                DASHBOARD
-              </p>
-            </div>
-          </Link>
+              {key === "dashboard" && <LayoutDashboard size={12} />}
+              {key === "portfolio" && <Wallet size={12} />}
+              {key === "journal"   && <BookOpen size={12} />}
+              {label}
+            </Link>
+          ))}
+        </nav>
 
-          {/* Nav links */}
-          <nav className="hidden sm:flex items-center gap-1">
-            {navLinks.map(({ href, label, key }) => (
-              <Link
-                key={key}
-                href={href}
-                className={clsx(
-                  "px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200",
-                  activePage === key
-                    ? "bg-[rgba(0,158,96,0.12)] text-[#009E60] border border-[rgba(0,158,96,0.25)]"
-                    : "text-slate-500 hover:text-slate-200 hover:bg-white/5",
-                )}
-              >
-                {label}
-              </Link>
-            ))}
-          </nav>
-        </div>
+        {/* ── Spacer ─────────────────────────────────────────────── */}
+        <div className="flex-1" />
 
-        {/* ── Right: clock + status + user ────────────────────────── */}
-        <div className="flex items-center gap-3">
+        {/* ── Right cluster ──────────────────────────────────────── */}
+        <div className="flex items-stretch">
           {/* Clock */}
           {time && (
-            <span className="hidden lg:block font-mono text-sm text-slate-500 tabular-nums">
-              {time}
-            </span>
+            <div className="hidden md:flex items-center px-4 border-l border-white/10">
+              <span className="font-mono text-[11px] text-slate-400 tabular-nums tracking-wider">
+                {time}
+              </span>
+            </div>
           )}
 
-          {/* Network */}
-          <div
-            className={clsx(
-              "hidden sm:flex items-center gap-1.5 text-xs font-mono",
-              online ? "text-emerald-600" : "text-red-400",
-            )}
-          >
-            {online ? <Wifi size={12} /> : <WifiOff size={12} />}
+          {/* Network status */}
+          <div className={clsx(
+            "hidden sm:flex items-center gap-1.5 px-3 border-l border-white/10 font-mono text-[10px] uppercase tracking-widest",
+            online ? "text-emerald-400" : "text-red-400",
+          )}>
+            {online ? <Wifi size={11} /> : <WifiOff size={11} />}
+            <span>{online ? "Online" : "Offline"}</span>
           </div>
 
-          {/* Auth section */}
-          {status === "loading" ? (
-            <div className="w-8 h-8 rounded-full shimmer-bg" />
-          ) : session ? (
-            /* ── User menu ────────────────────────────────────────── */
-            <div className="relative">
-              <button
-                onClick={() => setUserMenuOpen((v) => !v)}
-                className={clsx(
-                  "flex items-center gap-2 px-2.5 py-1.5 rounded-lg border transition-all duration-200",
-                  userMenuOpen
-                    ? "border-[rgba(0,158,96,0.35)] bg-[rgba(0,158,96,0.1)]"
-                    : "border-white/8 hover:border-white/15 hover:bg-white/5",
-                )}
-              >
-                {/* Avatar initial */}
-                <div
-                  className="w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold text-[#009E60] shrink-0"
-                  style={{
-                    background: "rgba(0,158,96,0.18)",
-                    border: "1px solid rgba(0,158,96,0.3)",
-                  }}
+          {/* Auth */}
+          <div className="flex items-stretch border-l border-white/10">
+            {status === "loading" ? (
+              <div className="w-12" />
+            ) : session ? (
+              <div className="relative">
+                <button
+                  onClick={() => setUserMenuOpen((v) => !v)}
+                  className="flex items-center gap-2 px-3 h-full hover:bg-white/5 transition-colors"
                 >
-                  {session.user.name?.[0]?.toUpperCase() || "U"}
-                </div>
-                <span className="hidden sm:block text-sm text-slate-300 max-w-[100px] truncate">
-                  {session.user.name}
-                </span>
-                <ChevronDownIcon
-                  size={12}
-                  className={clsx(
+                  <div className="w-6 h-6 rounded bg-[#009E60]/20 border border-[#009E60]/40 flex items-center justify-center text-[10px] font-bold text-[#009E60] font-mono">
+                    {session.user.name?.[0]?.toUpperCase() || "U"}
+                  </div>
+                  <span className="hidden md:block text-[11px] font-mono text-slate-300 max-w-[100px] truncate">
+                    {session.user.name}
+                  </span>
+                  <ChevronDownIcon size={10} className={clsx(
                     "text-slate-500 transition-transform",
                     userMenuOpen && "rotate-180",
-                  )}
-                />
-              </button>
+                  )} />
+                </button>
 
-              {/* Dropdown */}
-              {userMenuOpen && (
-                <>
-                  {/* Backdrop */}
-                  <div
-                    className="fixed inset-0 z-10"
-                    onClick={() => setUserMenuOpen(false)}
-                  />
-                  <div
-                    className="absolute right-0 top-full mt-2 w-52 z-20 rounded-xl border border-white/8 overflow-hidden animate-fade-up"
-                    style={{
-                      background: "rgba(10,14,22,0.95)",
-                      backdropFilter: "blur(20px)",
-                      boxShadow: "0 16px 48px rgba(0,0,0,0.6)",
-                    }}
-                  >
-                    {/* User info */}
-                    <div className="px-4 py-3 border-b border-white/5">
-                      <p className="text-white text-sm font-semibold truncate">
-                        {session.user.name}
-                      </p>
-                      <p className="text-slate-600 text-xs truncate">
-                        {session.user.email}
-                      </p>
-                    </div>
-
-                    {/* Links */}
-                    <div className="py-1">
-                      {navLinks.map(({ href, label, key }) => (
-                        <Link
-                          key={key}
-                          href={href}
-                          onClick={() => setUserMenuOpen(false)}
-                          className="flex items-center gap-2.5 px-4 py-2 text-sm text-slate-400 hover:text-white hover:bg-white/5 transition-colors"
+                {userMenuOpen && (
+                  <>
+                    <div className="fixed inset-0 z-10" onClick={() => setUserMenuOpen(false)} />
+                    <div className="absolute right-0 top-full w-56 bg-black border border-white/10 z-20 animate-fade-up">
+                      <div className="px-3 py-2 border-b border-white/10">
+                        <p className="text-white text-xs font-mono font-semibold truncate">{session.user.name}</p>
+                        <p className="text-slate-500 text-[10px] font-mono truncate">{session.user.email}</p>
+                      </div>
+                      <div className="py-1">
+                        {navLinks.map(({ href, label, key }) => (
+                          <Link
+                            key={key}
+                            href={href}
+                            onClick={() => setUserMenuOpen(false)}
+                            className="flex items-center gap-2 px-3 py-1.5 text-[11px] font-mono text-slate-400 hover:text-white hover:bg-white/5 transition-colors uppercase tracking-widest"
+                          >
+                            {key === "portfolio" ? <Wallet size={11} /> : key === "journal" ? <BookOpen size={11} /> : <LayoutDashboard size={11} />}
+                            {label}
+                          </Link>
+                        ))}
+                      </div>
+                      <div className="border-t border-white/10 py-1">
+                        <button
+                          onClick={handleSignOut}
+                          className="w-full flex items-center gap-2 px-3 py-1.5 text-[11px] font-mono text-red-400 hover:text-red-300 hover:bg-red-400/10 transition-colors uppercase tracking-widest"
                         >
-                          {key === "portfolio" ? (
-                            <Wallet size={13} />
-                          ) : key === "journal" ? (
-                            <BookOpen size={13} />
-                          ) : (
-                            <LayoutDashboard size={13} />
-                          )}
-                          {label}
-                        </Link>
-                      ))}
+                          <LogOut size={11} />
+                          Sign Out
+                        </button>
+                      </div>
                     </div>
-
-                    {/* Sign out */}
-                    <div className="border-t border-white/5 py-1">
-                      <button
-                        onClick={handleSignOut}
-                        className="w-full flex items-center gap-2.5 px-4 py-2 text-sm text-red-400 hover:text-red-300 hover:bg-red-400/8 transition-colors"
-                      >
-                        <LogOut size={13} />
-                        Sign Out
-                      </button>
-                    </div>
-                  </div>
-                </>
-              )}
-            </div>
-          ) : (
-            /* ── Guest: sign in button ───────────────────────────── */
-            <Link href="/login" className="btn-arc text-xs py-1.5 px-3">
-              <LogIn size={12} /> Sign In
-            </Link>
-          )}
+                  </>
+                )}
+              </div>
+            ) : (
+              <Link
+                href="/login"
+                className="flex items-center gap-1.5 px-3 text-[11px] font-mono text-[#009E60] uppercase tracking-widest font-semibold hover:bg-[#009E60]/10 transition-colors"
+              >
+                <LogIn size={11} />
+                Sign In
+              </Link>
+            )}
+          </div>
         </div>
       </div>
+
+      {/* ── Ticker tape ─────────────────────────────────────────── */}
+      <TickerTape />
     </header>
   );
 }
 
-// ── Decorative background gradients ──────────────────────────────────────────
+// ── Background (subtle grid, no glows) ────────────────────────────────────────
 function BackgroundDecor() {
   return (
     <>
-      {/* Top-left arc glow */}
       <div
-        className="pointer-events-none fixed top-0 left-0 w-[600px] h-[600px] -translate-x-1/2 -translate-y-1/2"
-        style={{
-          background:
-            "radial-gradient(circle, rgba(0,158,96,0.05) 0%, transparent 70%)",
-        }}
-      />
-      {/* Bottom-right ember glow */}
-      <div
-        className="pointer-events-none fixed bottom-0 right-0 w-[800px] h-[800px] translate-x-1/4 translate-y-1/4"
-        style={{
-          background:
-            "radial-gradient(circle, rgba(245,158,11,0.03) 0%, transparent 70%)",
-        }}
-      />
-      {/* Center dim radial */}
-      <div
-        className="pointer-events-none fixed inset-0"
-        style={{
-          background:
-            "radial-gradient(ellipse at 50% 0%, rgba(0,158,96,0.025) 0%, transparent 60%)",
-        }}
-      />
-      {/* Grid overlay */}
-      <div
-        className="pointer-events-none fixed inset-0 opacity-40"
+        className="pointer-events-none fixed inset-0 opacity-20"
         style={{
           backgroundImage:
-            "linear-gradient(rgba(0,158,96,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(0,158,96,0.04) 1px, transparent 1px)",
-          backgroundSize: "32px 32px",
-        }}
-      />
-      {/* Vignette */}
-      <div
-        className="pointer-events-none fixed inset-0"
-        style={{
-          background:
-            "radial-gradient(ellipse at center, transparent 40%, rgba(0,0,0,0.7) 100%)",
+            "linear-gradient(rgba(255,255,255,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.04) 1px, transparent 1px)",
+          backgroundSize: "40px 40px",
         }}
       />
     </>
   );
 }
 
-// ── Main Layout export ────────────────────────────────────────────────────────
-export default function Layout({ children, activePage }) {
+// ── Main layout ───────────────────────────────────────────────────────────────
+export default function Layout({ children, activePage, sidebar, rightRail }) {
   return (
-    <div className="relative min-h-screen bg-black overflow-x-hidden">
-      {/* Background decorations */}
+    <div className="relative min-h-screen bg-black text-slate-200 overflow-x-hidden">
       <BackgroundDecor />
 
-      {/* Content stack */}
       <div className="relative z-10 flex flex-col min-h-screen">
-        <Navbar activePage={activePage} />
+        <TopBar activePage={activePage} />
 
-        <main className="flex-1 max-w-screen-2xl mx-auto w-full px-4 sm:px-6 py-16 space-y-6">
-          {children}
+        <main className="flex-1 w-full max-w-[1600px] mx-auto">
+          <div className={clsx(
+            "grid",
+            sidebar || rightRail ? "grid-cols-1 lg:grid-cols-[260px_minmax(0,1fr)]" : "grid-cols-1",
+            rightRail && "xl:grid-cols-[260px_minmax(0,1fr)_280px]",
+          )}>
+            {sidebar && (
+              <aside className="bg-black border-r border-white/10">
+                {sidebar}
+              </aside>
+            )}
+
+            <div className="bg-black min-w-0 border-r border-white/10">
+              {children}
+            </div>
+
+            {rightRail && (
+              <aside className="hidden xl:block bg-black">
+                {rightRail}
+              </aside>
+            )}
+          </div>
         </main>
 
-        <footer className="border-t border-white/5 py-4 text-center">
-          <p className="text-[11px] text-slate-700 font-mono">
-            TRADING DISCIPLINE DASHBOARD · Built with Next.js + MongoDB ·{" "}
-            <span className="text-slate-600">
-              Trade with conviction, not emotion.
-            </span>
+        <footer className="border-t border-white/10 py-2 px-4 flex items-center justify-between">
+          <p className="text-[10px] text-slate-600 font-mono tracking-wider uppercase">
+            Trading Discipline Terminal · Next.js + MongoDB
+          </p>
+          <p className="text-[10px] text-slate-700 font-mono tracking-wider uppercase">
+            Trade with conviction, not emotion.
           </p>
         </footer>
       </div>
