@@ -1,22 +1,11 @@
 /**
  * components/MarketPrices/PriceCard.js
- * ─────────────────────────────────────────────────────────────────────────────
  * Glassmorphic card displaying a single market asset's price data.
- *
- * Props:
- *  asset  : { id, symbol, name, icon, price, change24h, category }
- *  loading: boolean – show skeleton state
  */
 
 import { TrendingUp, TrendingDown, Minus } from "lucide-react";
 import clsx from "clsx";
 
-// ── Formatting helpers ────────────────────────────────────────────────────────
-
-/**
- * Formats a price number with appropriate decimal places.
- * BTC: 2 dp, small cryptos: 4–6 dp, stocks/indices: 2 dp.
- */
 function formatPrice(price, category) {
   if (price === null || price === undefined) return "—";
   const absPrice = Math.abs(price);
@@ -25,12 +14,10 @@ function formatPrice(price, category) {
   return price.toLocaleString("en-US", { minimumFractionDigits: 4, maximumFractionDigits: 6 });
 }
 
-/** Returns currency prefix if asset is priced in USD. */
 function pricePrefix(category) {
   return ["crypto", "index", "bond", "commodity"].includes(category) ? "$" : "";
 }
 
-// ── Category badge colors ─────────────────────────────────────────────────────
 const CATEGORY_STYLE = {
   crypto:    "text-[#009E60] bg-[rgba(0,158,96,0.1)] border-[rgba(0,158,96,0.2)]",
   index:     "text-[#f59e0b] bg-[rgba(245,158,11,0.08)] border-[rgba(245,158,11,0.15)]",
@@ -39,46 +26,49 @@ const CATEGORY_STYLE = {
   commodity: "text-orange-400 bg-orange-400/10 border-orange-400/20",
 };
 
-// ── Skeleton loader ───────────────────────────────────────────────────────────
-export function PriceCardSkeleton() {
+export function PriceCardSkeleton({ compact = false }) {
   return (
-    <div className="glass-card p-4 h-[130px] flex flex-col justify-between">
+    <div
+      className={clsx(
+        "glass-card flex flex-col justify-between",
+        compact ? "p-3 h-[88px]" : "p-4 h-[130px]",
+      )}
+    >
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <div className="w-9 h-9 rounded-lg shimmer-bg" />
+          <div className={clsx("rounded-md shimmer-bg", compact ? "w-7 h-7" : "w-9 h-9")} />
           <div className="space-y-1.5">
-            <div className="h-3 w-10 rounded shimmer-bg" />
-            <div className="h-2.5 w-16 rounded shimmer-bg" />
+            <div className="h-2.5 w-8 rounded shimmer-bg" />
+            <div className="h-2 w-14 rounded shimmer-bg" />
           </div>
         </div>
-        <div className="h-4 w-12 rounded shimmer-bg" />
+        <div className="h-3 w-10 rounded shimmer-bg" />
       </div>
       <div className="space-y-1.5">
-        <div className="h-6 w-28 rounded shimmer-bg" />
-        <div className="h-3 w-20 rounded shimmer-bg" />
+        <div className="h-4 w-24 rounded shimmer-bg" />
+        <div className="h-2.5 w-16 rounded shimmer-bg" />
       </div>
     </div>
   );
 }
 
-// ── Main PriceCard component ──────────────────────────────────────────────────
-export default function PriceCard({ asset }) {
+export default function PriceCard({ asset, compact = false }) {
   const { symbol, name, icon, price, change24h, category } = asset;
 
   const isPositive = change24h > 0;
   const isNegative = change24h < 0;
   const isNeutral  = change24h === 0;
 
-  // Dynamic border glow based on price direction
   const cardClass = clsx(
-    "glass-card p-4 h-[130px] flex flex-col justify-between",
-    "transition-all duration-300 hover:-translate-y-0.5",
+    "glass-card flex flex-col justify-between transition-all duration-300 hover:-translate-y-0.5",
+    compact ? "p-3 h-[88px]" : "p-4 h-[130px]",
     isPositive && "hover:border-emerald-500/20",
     isNegative && "hover:border-red-500/20",
   );
 
   const changeClass = clsx(
-    "flex items-center gap-1 text-sm font-mono font-bold",
+    "flex items-center gap-0.5 font-mono font-bold",
+    compact ? "text-[11px]" : "text-sm",
     isPositive && "text-emerald-400",
     isNegative && "text-red-400",
     isNeutral  && "text-slate-400",
@@ -92,27 +82,29 @@ export default function PriceCard({ asset }) {
 
   return (
     <div className={cardClass}>
-      {/* ── Top row: icon + symbol + category ──────────────────────────── */}
+      {/* Top row: icon + symbol + category */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2.5">
-          {/* Asset icon bubble */}
+        <div className="flex items-center gap-2 min-w-0">
           <div
-            className="w-9 h-9 rounded-lg flex items-center justify-center text-lg font-bold"
+            className={clsx(
+              "rounded-md flex items-center justify-center font-bold shrink-0",
+              compact ? "w-7 h-7 text-sm" : "w-9 h-9 text-lg",
+            )}
             style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.08)" }}
           >
             {icon}
           </div>
 
-          <div>
-            <p className="text-white font-mono font-bold text-sm leading-none">{symbol}</p>
-            <p className="text-slate-500 text-xs mt-0.5 leading-none">{name}</p>
+          <div className="min-w-0">
+            <p className={clsx("text-white font-mono font-bold leading-none truncate", compact ? "text-xs" : "text-sm")}>{symbol}</p>
+            <p className={clsx("text-slate-500 leading-none mt-0.5 truncate", compact ? "text-[10px]" : "text-xs")}>{name}</p>
           </div>
         </div>
 
-        {/* Category badge */}
         <span
           className={clsx(
-            "text-[10px] font-mono uppercase tracking-wider px-1.5 py-0.5 rounded border",
+            "font-mono uppercase tracking-wider rounded border shrink-0",
+            compact ? "text-[8px] px-1 py-0.5" : "text-[10px] px-1.5 py-0.5",
             CATEGORY_STYLE[category] || "text-slate-400 bg-white/5 border-white/10"
           )}
         >
@@ -120,19 +112,19 @@ export default function PriceCard({ asset }) {
         </span>
       </div>
 
-      {/* ── Bottom row: price + 24h change ─────────────────────────────── */}
+      {/* Bottom row: price + 24h change */}
       <div>
-        <p className="text-white font-mono text-xl font-bold leading-tight">
+        <p className={clsx("text-white font-mono font-bold leading-tight tabular-nums", compact ? "text-base" : "text-xl")}>
           {pricePrefix(category)}
           {formatPrice(price, symbol)}
         </p>
 
         <div className={changeClass}>
-          <ChangeIcon size={12} />
-          <span>
+          <ChangeIcon size={compact ? 9 : 12} />
+          <span className="tabular-nums">
             {isPositive ? "+" : ""}{change24h.toFixed(2)}%
           </span>
-          <span className="text-slate-600 font-normal text-xs">24h</span>
+          {!compact && <span className="text-slate-600 font-normal text-xs">24h</span>}
         </div>
       </div>
     </div>
