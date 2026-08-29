@@ -171,12 +171,12 @@ function Navbar({ activePage }) {
               className="w-8 h-8 rounded-lg flex items-center justify-center"
               style={{
                 background:
-                  "linear-gradient(135deg, rgba(0,212,255,0.2), rgba(0,212,255,0.05))",
-                border: "1px solid rgba(0,212,255,0.3)",
-                boxShadow: "0 0 12px rgba(0,212,255,0.15)",
+                  "linear-gradient(135deg, rgba(34,197,94,0.25), rgba(34,197,94,0.05))",
+                border: "1px solid rgba(34,197,94,0.35)",
+                boxShadow: "0 0 12px rgba(34,197,94,0.2)",
               }}
             >
-              <BarChart2 size={15} className="text-[#00d4ff]" />
+              <BarChart2 size={15} className="text-[#22c55e]" />
             </div>
             <div className="hidden sm:block">
               <p className="font-display text-white text-lg tracking-widest leading-none">
@@ -197,7 +197,7 @@ function Navbar({ activePage }) {
                 className={clsx(
                   "px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200",
                   activePage === key
-                    ? "bg-[rgba(0,212,255,0.1)] text-[#00d4ff] border border-[rgba(0,212,255,0.2)]"
+                    ? "bg-[rgba(34,197,94,0.12)] text-[#22c55e] border border-[rgba(34,197,94,0.25)]"
                     : "text-slate-500 hover:text-slate-200 hover:bg-white/5",
                 )}
               >
@@ -237,16 +237,16 @@ function Navbar({ activePage }) {
                 className={clsx(
                   "flex items-center gap-2 px-2.5 py-1.5 rounded-lg border transition-all duration-200",
                   userMenuOpen
-                    ? "border-[rgba(0,212,255,0.3)] bg-[rgba(0,212,255,0.08)]"
+                    ? "border-[rgba(34,197,94,0.35)] bg-[rgba(34,197,94,0.1)]"
                     : "border-white/8 hover:border-white/15 hover:bg-white/5",
                 )}
               >
                 {/* Avatar initial */}
                 <div
-                  className="w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold text-[#00d4ff] shrink-0"
+                  className="w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold text-[#22c55e] shrink-0"
                   style={{
-                    background: "rgba(0,212,255,0.15)",
-                    border: "1px solid rgba(0,212,255,0.25)",
+                    background: "rgba(34,197,94,0.18)",
+                    border: "1px solid rgba(34,197,94,0.3)",
                   }}
                 >
                   {session.user.name?.[0]?.toUpperCase() || "U"}
@@ -345,7 +345,7 @@ function BackgroundDecor() {
         className="pointer-events-none fixed top-0 left-0 w-[600px] h-[600px] -translate-x-1/2 -translate-y-1/2"
         style={{
           background:
-            "radial-gradient(circle, rgba(0,212,255,0.04) 0%, transparent 70%)",
+            "radial-gradient(circle, rgba(34,197,94,0.05) 0%, transparent 70%)",
         }}
       />
       {/* Bottom-right ember glow */}
@@ -361,7 +361,7 @@ function BackgroundDecor() {
         className="pointer-events-none fixed inset-0"
         style={{
           background:
-            "radial-gradient(ellipse at 50% 0%, rgba(0,212,255,0.02) 0%, transparent 60%)",
+            "radial-gradient(ellipse at 50% 0%, rgba(34,197,94,0.025) 0%, transparent 60%)",
         }}
       />
       {/* Grid overlay */}
@@ -369,7 +369,7 @@ function BackgroundDecor() {
         className="pointer-events-none fixed inset-0 opacity-40"
         style={{
           backgroundImage:
-            "linear-gradient(rgba(0,212,255,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(0,212,255,0.03) 1px, transparent 1px)",
+            "linear-gradient(rgba(34,197,94,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(34,197,94,0.04) 1px, transparent 1px)",
           backgroundSize: "32px 32px",
         }}
       />
@@ -378,7 +378,7 @@ function BackgroundDecor() {
         className="pointer-events-none fixed inset-0"
         style={{
           background:
-            "radial-gradient(ellipse at center, transparent 40%, rgba(4,8,15,0.6) 100%)",
+            "radial-gradient(ellipse at center, transparent 40%, rgba(0,0,0,0.7) 100%)",
         }}
       />
     </>
@@ -388,7 +388,7 @@ function BackgroundDecor() {
 // ── Main Layout export ────────────────────────────────────────────────────────
 export default function Layout({ children, activePage }) {
   return (
-    <div className="relative min-h-screen bg-[#04080f] overflow-x-hidden">
+    <div className="relative min-h-screen bg-black overflow-x-hidden">
       {/* Background decorations */}
       <BackgroundDecor />
 
