@@ -63,10 +63,10 @@ export default function LoginPage() {
 
         {/* Background glows */}
         <div className="pointer-events-none fixed top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px]"
-          style={{ background: "radial-gradient(ellipse, rgba(34,197,94,0.06) 0%, transparent 70%)" }} />
+          style={{ background: "radial-gradient(ellipse, rgba(0,158,96,0.06) 0%, transparent 70%)" }} />
         <div className="pointer-events-none fixed inset-0 opacity-30"
           style={{
-            backgroundImage: "linear-gradient(rgba(34,197,94,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(34,197,94,0.04) 1px, transparent 1px)",
+            backgroundImage: "linear-gradient(rgba(0,158,96,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(0,158,96,0.04) 1px, transparent 1px)",
             backgroundSize: "32px 32px",
           }} />
 
@@ -77,11 +77,11 @@ export default function LoginPage() {
           <div className="flex flex-col items-center mb-8">
             <div className="w-14 h-14 rounded-2xl flex items-center justify-center mb-4"
               style={{
-                background: "linear-gradient(135deg, rgba(34,197,94,0.25), rgba(34,197,94,0.04))",
-                border: "1px solid rgba(34,197,94,0.35)",
-                boxShadow: "0 0 40px rgba(34,197,94,0.18)",
+                background: "linear-gradient(135deg, rgba(0,158,96,0.25), rgba(0,158,96,0.04))",
+                border: "1px solid rgba(0,158,96,0.35)",
+                boxShadow: "0 0 40px rgba(0,158,96,0.18)",
               }}>
-              <BarChart2 size={26} className="text-[#22c55e]" />
+              <BarChart2 size={26} className="text-[#009E60]" />
             </div>
             <h1 className="font-display text-3xl tracking-widest text-white">TRADING DISCIPLINE</h1>
             <p className="text-slate-500 text-sm font-mono mt-1">Sign in to your dashboard</p>
@@ -152,11 +152,11 @@ export default function LoginPage() {
                 className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg font-semibold text-sm transition-all duration-200 mt-2"
                 style={{
                   background: loading
-                    ? "rgba(34,197,94,0.1)"
-                    : "linear-gradient(135deg, rgba(34,197,94,0.25), rgba(34,197,94,0.1))",
-                  border: "1px solid rgba(34,197,94,0.35)",
-                  color: "#22c55e",
-                  boxShadow: loading ? "none" : "0 0 20px rgba(34,197,94,0.15)",
+                    ? "rgba(0,158,96,0.1)"
+                    : "linear-gradient(135deg, rgba(0,158,96,0.25), rgba(0,158,96,0.1))",
+                  border: "1px solid rgba(0,158,96,0.35)",
+                  color: "#009E60",
+                  boxShadow: loading ? "none" : "0 0 20px rgba(0,158,96,0.15)",
                 }}
               >
                 {loading ? <Loader2 size={15} className="animate-spin" /> : <LogIn size={15} />}
@@ -173,7 +173,7 @@ export default function LoginPage() {
 
             <p className="text-center text-sm text-slate-500">
               Don&apos;t have an account?{" "}
-              <Link href="/register" className="text-[#22c55e] hover:text-[#16a34a] font-medium transition-colors">
+              <Link href="/register" className="text-[#009E60] hover:text-[#007a4a] font-medium transition-colors">
                 Create one free
               </Link>
             </p>

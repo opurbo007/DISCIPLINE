@@ -95,8 +95,8 @@ function CoinLogo({ icon, symbol, size = 32 }) {
 function StatCard({ label, value, sub, icon: Icon, color = "arc", trend }) {
   const colorMap = {
     arc: {
-      text: "text-[#22c55e]",
-      bg: "bg-[rgba(34,197,94,0.1)]",
+      text: "text-[#009E60]",
+      bg: "bg-[rgba(0,158,96,0.1)]",
       card: "glass-card-arc",
     },
     ember: {
@@ -182,7 +182,7 @@ function AssetAllocationPanel({
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <div className="flex items-center gap-2">
-            <Wallet size={16} className="text-[#22c55e]" />
+            <Wallet size={16} className="text-[#009E60]" />
             <h3 className="font-display text-2xl tracking-wider text-white">
               TOTAL ASSET
             </h3>
@@ -224,7 +224,7 @@ function AssetAllocationPanel({
           <p className="text-[10px] font-mono uppercase tracking-wider text-slate-600">
             Buy
           </p>
-          <p className="mt-2 font-mono text-xl font-bold text-[#22c55e]">
+          <p className="mt-2 font-mono text-xl font-bold text-[#009E60]">
             {fmtPct(boughtPct).replace("+", "")}
           </p>
           <p className="mt-1 text-xs font-mono text-slate-600">
@@ -283,7 +283,7 @@ function AssetAllocationPanel({
       <div className="mt-4 h-2 overflow-hidden rounded-full bg-white/5">
         <div className="flex h-full">
           <div
-            className={clsx(overAllocated ? "bg-red-400" : "bg-[#22c55e]")}
+            className={clsx(overAllocated ? "bg-red-400" : "bg-[#009E60]")}
             style={{ width: `${investedWidth}%` }}
           />
           <div className="bg-[#f59e0b]" style={{ width: `${leftWidth}%` }} />
@@ -476,7 +476,7 @@ function HoldingForm({ initial = {}, onSubmit, onCancel, loading }) {
         {totalCost !== null && (
           <p className="text-xs text-slate-500 font-mono ml-auto">
             Total invested:{" "}
-            <span className="text-[#22c55e] font-bold">{fmt$(totalCost)}</span>
+            <span className="text-[#009E60] font-bold">{fmt$(totalCost)}</span>
           </p>
         )}
       </div>
@@ -516,7 +516,7 @@ function SortBtn({ col, sort, setSort, children }) {
       }
       className={clsx(
         "flex items-center gap-1 font-mono text-[10px] uppercase tracking-wider whitespace-nowrap transition-colors",
-        active ? "text-[#22c55e]" : "text-slate-600 hover:text-slate-400",
+        active ? "text-[#009E60]" : "text-slate-600 hover:text-slate-400",
       )}
     >
       {children}
@@ -640,7 +640,7 @@ function SellModal({ lot, currentPrice, onClose, onConfirm }) {
         {total > 0 && (
           <p className="text-xs text-slate-500 font-mono">
             You will receive:{" "}
-            <span className="text-[#22c55e] font-bold">{fmt$(total)}</span>
+            <span className="text-[#009E60] font-bold">{fmt$(total)}</span>
           </p>
         )}
 
@@ -929,7 +929,7 @@ function LotRow({ lot, currentPrice, onDelete, onEdit, onSell }) {
           </button>
           <button
             onClick={onEdit}
-            className="p-1 rounded text-slate-600 hover:text-[#22c55e] hover:bg-[rgba(34,197,94,0.12)] transition-colors"
+            className="p-1 rounded text-slate-600 hover:text-[#009E60] hover:bg-[rgba(0,158,96,0.12)] transition-colors"
           >
             <Pencil size={11} />
           </button>
@@ -1089,7 +1089,7 @@ function CoinRow({
           editingId === lot._id ? (
             <tr
               key={lot._id}
-              className="bg-[rgba(34,197,94,0.03)] border-b border-white/[0.04]"
+              className="bg-[rgba(0,158,96,0.03)] border-b border-white/[0.04]"
             >
               <td colSpan={8} className="px-4 py-4">
                 <HoldingForm
@@ -1349,7 +1349,7 @@ export default function Portfolio() {
       {/* ── Header ──────────────────────────────────────────────────── */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <Wallet size={18} className="text-[#22c55e]" />
+          <Wallet size={18} className="text-[#009E60]" />
           <h2 className="font-display text-3xl tracking-wider text-white">
             MY PORTFOLIO
           </h2>
@@ -1566,7 +1566,7 @@ export default function Portfolio() {
         <div className="glass-card overflow-hidden">
           <div className="flex items-center justify-between border-b border-white/[0.06] px-4 py-3">
             <div className="flex items-center gap-2">
-              <FileText size={14} className="text-[#22c55e]" />
+              <FileText size={14} className="text-[#009E60]" />
               <h3 className="font-display text-xl tracking-wider text-white">
                 SELL HISTORY
               </h3>
@@ -1658,7 +1658,7 @@ export default function Portfolio() {
                         <div className="flex gap-1 justify-center opacity-60 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
                           <button
                             onClick={() => setEditingSell(trade)}
-                            className="p-1.5 rounded text-slate-400 hover:text-[#22c55e] hover:bg-[rgba(34,197,94,0.12)] transition-colors"
+                            className="p-1.5 rounded text-slate-400 hover:text-[#009E60] hover:bg-[rgba(0,158,96,0.12)] transition-colors"
                             title="Edit sale"
                           >
                             <Pencil size={12} />

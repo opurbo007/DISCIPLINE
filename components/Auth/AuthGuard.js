@@ -30,7 +30,7 @@ export default function AuthGuard({ children }) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
-          <Loader2 size={32} className="text-[#22c55e] animate-spin" />
+          <Loader2 size={32} className="text-[#009E60] animate-spin" />
           <p className="text-slate-500 font-mono text-sm">Verifying session…</p>
         </div>
       </div>

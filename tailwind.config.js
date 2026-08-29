@@ -16,9 +16,9 @@ module.exports = {
 
         // Accent – neon green (primary accent)
         arc: {
-          DEFAULT: "#22c55e",
-          dim:     "#16a34a",
-          glow:    "rgba(34,197,94,0.15)",
+          DEFAULT: "#009E60",
+          dim:     "#007a4a",
+          glow:    "rgba(0,158,96,0.15)",
         },
 
         // Accent – amber gold
@@ -29,7 +29,7 @@ module.exports = {
         },
 
         // Semantic
-        bull:  "#22c55e",   // gains / positive
+        bull:  "#009E60",   // gains / positive
         bear:  "#ef4444",   // losses / negative
 
         // Neutral glass tints
@@ -55,7 +55,7 @@ module.exports = {
 
       // ── Box shadows ────────────────────────────────────────────────────
       boxShadow: {
-        "glass-arc":   "0 0 0 1px rgba(34,197,94,0.15), 0 8px 32px rgba(0,0,0,0.4)",
+        "glass-arc":   "0 0 0 1px rgba(0,158,96,0.15), 0 8px 32px rgba(0,0,0,0.4)",
         "glass-ember": "0 0 0 1px rgba(245,158,11,0.15), 0 8px 32px rgba(0,0,0,0.4)",
         "glass-plain": "0 0 0 1px rgba(255,255,255,0.07), 0 8px 32px rgba(0,0,0,0.4)",
         "inner-glow":  "inset 0 1px 0 rgba(255,255,255,0.08)",
@@ -68,8 +68,8 @@ module.exports = {
           "100%": { opacity: "1", transform: "translateY(0)" },
         },
         "pulse-arc": {
-          "0%, 100%": { boxShadow: "0 0 0 0 rgba(34,197,94,0)" },
-          "50%":       { boxShadow: "0 0 0 4px rgba(34,197,94,0.25)" },
+          "0%, 100%": { boxShadow: "0 0 0 0 rgba(0,158,96,0)" },
+          "50%":       { boxShadow: "0 0 0 4px rgba(0,158,96,0.25)" },
         },
         shimmer: {
           "0%":   { backgroundPosition: "-200% 0" },
@@ -95,7 +95,7 @@ module.exports = {
       // ── Gradients ──────────────────────────────────────────────────────
       backgroundImage: {
         "grid-pattern":
-          "linear-gradient(rgba(34,197,94,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(34,197,94,0.04) 1px, transparent 1px)",
+          "linear-gradient(rgba(0,158,96,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(0,158,96,0.04) 1px, transparent 1px)",
         "noise-overlay":
           "url(\"data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E\")",
       },

@@ -127,7 +127,7 @@ export default function MarketPrices() {
 
           <span className="flex items-center gap-1.5">
             {isValidating ? (
-              <RefreshCw size={10} className="text-[#22c55e] animate-spin" />
+              <RefreshCw size={10} className="text-[#009E60] animate-spin" />
             ) : (
               <span className="relative flex h-2 w-2">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-60" />
