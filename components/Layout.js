@@ -396,7 +396,7 @@ export default function Layout({ children, activePage }) {
       <div className="relative z-10 flex flex-col min-h-screen">
         <Navbar activePage={activePage} />
 
-        <main className="flex-1 max-w-screen-2xl mx-auto w-full px-4 sm:px-6 py-20 space-y-10">
+        <main className="flex-1 max-w-screen-2xl mx-auto w-full px-4 sm:px-6 py-16 space-y-6">
           {children}
         </main>
 
