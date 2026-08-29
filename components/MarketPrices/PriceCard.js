@@ -32,7 +32,7 @@ function pricePrefix(category) {
 
 // ── Category badge colors ─────────────────────────────────────────────────────
 const CATEGORY_STYLE = {
-  crypto:    "text-[#00d4ff] bg-[rgba(0,212,255,0.08)] border-[rgba(0,212,255,0.15)]",
+  crypto:    "text-[#22c55e] bg-[rgba(34,197,94,0.1)] border-[rgba(34,197,94,0.2)]",
   index:     "text-[#f59e0b] bg-[rgba(245,158,11,0.08)] border-[rgba(245,158,11,0.15)]",
   forex:     "text-purple-400 bg-purple-400/10 border-purple-400/20",
   bond:      "text-slate-300 bg-white/5 border-white/10",
