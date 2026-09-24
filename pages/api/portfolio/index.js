@@ -11,7 +11,6 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/pages/api/auth/[...nextauth]";
 import dbConnect from "@/lib/mongodb";
 import Holding from "@/lib/models/Holding";
-import User from "@/lib/models/User";
 
 export default async function handler(req, res) {
   // ── Auth guard ────────────────────────────────────────────────────────────
@@ -59,9 +58,10 @@ export default async function handler(req, res) {
         notes: notes || "",
       });
 
-      // Adjust user's cash asset after buying
-await User.updateOne({ _id: userId }, { $inc: { totalAsset: - (parseFloat(purchasePrice) * parseFloat(units)) } });
-return res.status(201).json({ success: true, data: holding });
+      // NOTE: User.totalAsset is the fixed TOTAL capital (invariant).
+      // Buying only creates a holding — cash is derived as total - invested,
+      // so no cash adjustment is needed here.
+      return res.status(201).json({ success: true, data: holding });
     } catch (err) {
       if (err.name === "ValidationError") {
         const messages = Object.values(err.errors).map((e) => e.message);

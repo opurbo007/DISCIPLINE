@@ -1,8 +1,8 @@
 /**
  * pages/api/user/asset.js
  * ─────────────────────────────────────────────────────────────────────────────
- *  GET  /api/user/asset  → Return the user's total cash asset (USD)
- *  POST /api/user/asset  → Update the user's total cash asset
+ *  GET  /api/user/asset  → Return the user's fixed total capital (USD)
+ *  POST /api/user/asset  → Update the user's fixed total capital
  */
 
 import { getServerSession } from "next-auth/next";

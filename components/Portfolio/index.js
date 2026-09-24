@@ -164,18 +164,21 @@ function AssetAllocationPanel({
   totalValue,
   pnl,
 }) {
-  const startingAsset = totalAsset + totalInvested;
+  // totalAsset = fixed TOTAL capital (invariant — buying never changes it).
+  // Cash left is derived: total - invested cost.
+  const totalCapital = totalAsset;
+  const cashLeft = totalCapital - totalInvested;
   const boughtPct =
-    startingAsset > 0 ? (totalInvested / startingAsset) * 100 : 0;
-  const left = totalAsset;
-  const leftPct = startingAsset > 0 ? (left / startingAsset) * 100 : 0;
-  const pnlOfTotalPct = startingAsset > 0 ? (pnl / startingAsset) * 100 : 0;
-  const currentAssetValue = totalAsset + totalValue;
-  const overAllocated = totalAsset < 0;
+    totalCapital > 0 ? (totalInvested / totalCapital) * 100 : 0;
+  const left = cashLeft;
+  const leftPct = totalCapital > 0 ? (cashLeft / totalCapital) * 100 : 0;
+  const pnlOfTotalPct = totalCapital > 0 ? (pnl / totalCapital) * 100 : 0;
+  const currentAssetValue = cashLeft + totalValue;
+  const overAllocated = cashLeft < 0;
 
   const investedWidth =
-    startingAsset > 0 ? Math.min(100, Math.max(0, boughtPct)) : 0;
-  const leftWidth = startingAsset > 0 ? Math.min(100, Math.max(0, leftPct)) : 0;
+    totalCapital > 0 ? Math.min(100, Math.max(0, boughtPct)) : 0;
+  const leftWidth = totalCapital > 0 ? Math.min(100, Math.max(0, leftPct)) : 0;
 
   return (
     <div className="glass-card p-5">
@@ -190,7 +193,7 @@ function AssetAllocationPanel({
         </div>
 
         <label className="w-full lg:w-64">
-          <span className="field-label">Total Asset (USD)</span>
+          <span className="field-label">Total Capital (USD) — stays fixed when you buy</span>
           <div className="relative">
             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-600 font-mono text-sm">
               $
@@ -213,10 +216,10 @@ function AssetAllocationPanel({
             Total Asset
           </p>
           <p className="mt-2 font-mono text-xl font-bold text-white">
-            {fmt$(startingAsset)}
+            {fmt$(totalCapital)}
           </p>
           <p className="mt-1 text-xs font-mono text-slate-600">
-            cash + invested cost
+            fixed capital (buying never changes this)
           </p>
         </div>
 
@@ -275,7 +278,7 @@ function AssetAllocationPanel({
             {fmt$(currentAssetValue)}
           </p>
           <p className="mt-1 text-xs font-mono text-slate-600">
-            left + current holding value
+            cash left + live holding value
           </p>
         </div>
       </div>
@@ -1266,7 +1269,6 @@ export default function Portfolio() {
       });
       await mutateHoldings();
       await mutatePrices(); // refresh prices to include the new coin
-      await mutateAsset();
       setShowForm(false);
     } finally {
       setAdding(false);
@@ -1295,7 +1297,6 @@ export default function Portfolio() {
     }
     await mutateHoldings();
     await mutatePrices();
-    await mutateAsset();
     await mutateTrades();
   };
 
@@ -1320,7 +1321,6 @@ export default function Portfolio() {
       throw new Error(result.error || "Failed to update sell");
     }
     await mutateTrades();
-    await mutateAsset();
     await mutateHoldings();
   };
 
@@ -1335,7 +1335,6 @@ export default function Portfolio() {
       return;
     }
     await mutateTrades();
-    await mutateAsset();
     await mutateHoldings();
   };
 

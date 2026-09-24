@@ -20,7 +20,6 @@ import { authOptions } from "@/pages/api/auth/[...nextauth]";
 import dbConnect from "@/lib/mongodb";
 import Trade from "@/lib/models/Trade";
 import Holding from "@/lib/models/Holding";
-import User from "@/lib/models/User";
 import mongoose from "mongoose";
 
 export default async function handler(req, res) {
@@ -75,13 +74,11 @@ export default async function handler(req, res) {
         return res.status(400).json({ success: false, error: "Sell price must be > 0" });
       }
 
-      // Reverse the previous sell's cash impact, then re-apply with new values
-      const oldTradeAmount = existing.tradeAmount;
+      // NOTE: User.totalAsset is the fixed TOTAL capital (invariant),
+      // so editing a sell only updates the trade + holding — no cash delta.
+      const oldUnitsTag = (existing.tags || []).find((t) => t.startsWith("units:"));
+      const oldUnits = oldUnitsTag ? Number(oldUnitsTag.split(":")[1]) : null;
       const newTradeAmount = newUnits * newPrice;
-      const cashDelta = newTradeAmount - oldTradeAmount;
-      if (cashDelta !== 0) {
-        await User.updateOne({ _id: userId }, { $inc: { totalAsset: cashDelta } });
-      }
 
       // Update Trade fields
       existing.exitPrice = newPrice;
@@ -108,13 +105,10 @@ export default async function handler(req, res) {
       const holdingTag = existing.tags.find((t) => t.startsWith("holding:"));
       if (holdingTag) {
         const holdingId = holdingTag.split(":")[1];
-        // We don't know the original purchased units exactly; instead we
-        // re-derive a "remaining units delta" = (oldUnits - newUnits)
-        const oldUnits = oldTradeAmount && existing.exitPrice
-          ? oldTradeAmount / existing.exitPrice
-          : null;
-        if (oldUnits != null) {
-          const delta = newUnits - oldUnits; // positive = fewer sold now
+        // Remaining = purchased - sold, so adjusting the sell from oldUnits
+        // to newUnits shifts the holding by (oldUnits - newUnits).
+        if (oldUnits != null && Number.isFinite(oldUnits)) {
+          const delta = oldUnits - newUnits;
           if (Math.abs(delta) > 1e-12) {
             await Holding.updateOne(
               { _id: holdingId, userId },
@@ -137,11 +131,8 @@ export default async function handler(req, res) {
       const trade = await Trade.findOneAndDelete({ _id: id, userId });
       if (!trade) return res.status(404).json({ success: false, error: "Not found" });
 
-      // Reverse cash impact (we added the trade amount when the sell happened)
-      await User.updateOne(
-        { _id: userId },
-        { $inc: { totalAsset: -trade.tradeAmount } },
-      );
+      // Deleting a sell only removes the trade + restores holding units.
+      // Total capital is invariant, so no cash adjustment is needed.
 
       // Restore holding units
       const holdingTag = (trade.tags || []).find((t) => t.startsWith("holding:"));

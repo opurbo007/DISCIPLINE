@@ -22,7 +22,6 @@ import { authOptions } from "@/pages/api/auth/[...nextauth]";
 import dbConnect from "@/lib/mongodb";
 import Holding from "@/lib/models/Holding";
 import Trade from "@/lib/models/Trade";
-import User from "@/lib/models/User";
 
 export default async function handler(req, res) {
   // ── Auth guard ──────────────────────────────────────────────────────────────
@@ -84,8 +83,9 @@ export default async function handler(req, res) {
       tags: [`holding:${holdingId}`, `units:${sellUnits}`, `buy:${purchasePrice}`, "portfolio"],
       tradeDate: sellDate ? new Date(sellDate) : new Date(),
     });
-    // Adjust user's cash asset after selling
-    await User.updateOne({ _id: userId }, { $inc: { totalAsset: tradeAmount } });
+    // NOTE: User.totalAsset is the fixed TOTAL capital (invariant).
+    // Selling only shrinks the holding — cash is derived as total - invested,
+    // so no cash adjustment is needed here.
 
     // Update or delete the holding
     if (remainingUnits <= 0) {
