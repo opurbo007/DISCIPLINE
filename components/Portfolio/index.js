@@ -1,4 +1,5 @@
-import { useState, useMemo, useCallback, useEffect } from "react";
+import { useState, useMemo, useCallback, useEffect, Children, cloneElement } from "react";
+import { createPortal } from "react-dom";
 import useSWR from "swr";
 import {
   Plus,
@@ -20,6 +21,7 @@ import {
   Calendar,
   FileText,
   RefreshCw,
+  MoreHorizontal,
 } from "lucide-react";
 import clsx from "clsx";
 import CoinSearch from "./CoinSearch";
@@ -569,9 +571,12 @@ function SellModal({ lot, currentPrice, onClose, onConfirm }) {
 
   const total = (parseFloat(units) || 0) * (parseFloat(price) || 0);
 
-  return (
+  // Portal to document.body so the dialog always renders above every
+  // section / table (never trapped inside overflow-hidden containers).
+  if (typeof document === "undefined") return null;
+  return createPortal(
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
       onClick={onClose}
     >
       <form
@@ -668,7 +673,8 @@ function SellModal({ lot, currentPrice, onClose, onConfirm }) {
           </button>
         </div>
       </form>
-    </div>
+    </div>,
+    document.body,
   );
 }
 
@@ -851,8 +857,128 @@ function EditSellModal({ trade, onClose, onSave }) {
   );
 }
 
+// ── Row action dropdown (⋯) — works on touch, no hover needed ──────────────────
+// Renders its menu above table clipping; closes on outside click / Escape.
+function RowMenu({ openUp, label = "Row actions", onClose, children }) {
+  const [open, setOpen] = useState(false);
+
+  const closeMenu = useCallback(() => {
+    setOpen(false);
+    onClose?.();
+  }, [onClose]);
+
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e) => {
+      if (e.key === "Escape") closeMenu();
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [open, closeMenu]);
+
+  return (
+    <div className="relative inline-flex">
+      <button
+        type="button"
+        title={label}
+        aria-label={label}
+        aria-expanded={open}
+        onClick={() => (open ? closeMenu() : setOpen(true))}
+        className={clsx(
+          "rounded-lg p-1.5 transition-colors",
+          open
+            ? "bg-white/10 text-white"
+            : "text-zinc-500 hover:bg-white/[0.06] hover:text-white",
+        )}
+      >
+        <MoreHorizontal size={15} />
+      </button>
+      {open && (
+        <>
+          <div
+            className="fixed inset-0 z-30 cursor-default"
+            onClick={closeMenu}
+          />
+          <div
+            className={clsx(
+              "absolute right-0 z-40 w-44 overflow-hidden rounded-xl border border-white/10 bg-[#141926] shadow-pop",
+              openUp ? "bottom-[calc(100%+6px)]" : "top-[calc(100%+6px)]",
+            )}
+          >
+            {Children.toArray(children).map(
+              (child) =>
+                child && typeof child === "object" && "type" in child
+                  ? cloneElement(child, { close: closeMenu })
+                  : child,
+            )}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+// Single dropdown item. Return `true` from onSelect to keep the menu open
+// (used for the first tap of a two-step delete confirm).
+function MenuItem({ icon: Icon, tone = "default", onSelect, close, children }) {
+  return (
+    <button
+      type="button"
+      onClick={() => {
+        const keep = onSelect?.();
+        if (keep !== true) close?.();
+      }}
+      className={clsx(
+        "flex w-full items-center gap-2.5 px-3 py-2 text-left text-[12.5px] font-medium transition-colors",
+        tone === "danger"
+          ? "text-red-300 hover:bg-red-400/10"
+          : "text-zinc-300 hover:bg-white/[0.06] hover:text-white",
+      )}
+    >
+      {Icon && (
+        <Icon
+          size={13}
+          className={tone === "danger" ? "text-red-400" : "text-zinc-500"}
+        />
+      )}
+      {children}
+    </button>
+  );
+}
+
+// Two-step delete confirm shown inside the dropdown — no native dialogs.
+function MenuConfirm({ message, confirmLabel = "Delete", onConfirm, onCancel, close }) {
+  return (
+    <div className="p-2">
+      <p className="px-1 pb-2 text-[11.5px] leading-snug text-zinc-400">{message}</p>
+      <div className="flex gap-1.5">
+        <button
+          type="button"
+          onClick={() => {
+            onConfirm?.();
+            close?.();
+          }}
+          className="flex-1 rounded-lg bg-red-500/15 border border-red-400/25 px-2 py-1.5 text-[12px] font-semibold text-red-300 hover:bg-red-500/25 transition-colors"
+        >
+          {confirmLabel}
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            onCancel?.();
+            close?.();
+          }}
+          className="flex-1 rounded-lg bg-white/[0.05] border border-white/10 px-2 py-1.5 text-[12px] font-medium text-zinc-300 hover:bg-white/[0.09] transition-colors"
+        >
+          Cancel
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // ── Individual lot row (inside expanded coin) ─────────────────────────────────
-function LotRow({ lot, currentPrice, onDelete, onEdit, onSell }) {
+function LotRow({ lot, currentPrice, onDelete, onEdit, onSell, menuOpenUp }) {
   const [showSellModal, setShowSellModal] = useState(false);
 
   const [confirmDel, setConfirmDel] = useState(false);
@@ -922,43 +1048,43 @@ function LotRow({ lot, currentPrice, onDelete, onEdit, onSell }) {
         )}
       </td>
       <td className="px-4 py-2.5">
-        <div className="flex gap-1 justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-          <button
-            onClick={() => setShowSellModal(true)}
-            className="p-1 rounded text-slate-600 hover:text-emerald-400 hover:bg-emerald-400/10 transition-colors"
-            title="Sell"
+        <div className="flex justify-center">
+          <RowMenu
+            openUp={menuOpenUp}
+            label={`${lot.symbol} lot actions`}
+            onClose={() => setConfirmDel(false)}
           >
-            <DollarSign size={11} />
-          </button>
-          <button
-            onClick={onEdit}
-            className="p-1 rounded text-slate-600 hover:text-[#009E60] hover:bg-[rgba(0,158,96,0.12)] transition-colors"
-          >
-            <Pencil size={11} />
-          </button>
-          {confirmDel ? (
-            <>
-              <button
-                onClick={onDelete}
-                className="p-1 rounded text-red-400 hover:bg-red-400/10"
+            {!confirmDel && (
+              <MenuItem icon={DollarSign} onSelect={() => setShowSellModal(true)}>
+                Sell
+              </MenuItem>
+            )}
+            {!confirmDel && (
+              <MenuItem icon={Pencil} onSelect={onEdit}>
+                Edit
+              </MenuItem>
+            )}
+            {!confirmDel && (
+              <MenuItem
+                icon={Trash2}
+                tone="danger"
+                onSelect={() => {
+                  setConfirmDel(true);
+                  return true; // keep menu open for the confirm step
+                }}
               >
-                <Check size={11} />
-              </button>
-              <button
-                onClick={() => setConfirmDel(false)}
-                className="p-1 rounded text-slate-600 hover:bg-white/5"
-              >
-                <X size={11} />
-              </button>
-            </>
-          ) : (
-            <button
-              onClick={() => setConfirmDel(true)}
-              className="p-1 rounded text-slate-600 hover:text-red-400 hover:bg-red-400/10 transition-colors"
-            >
-              <Trash2 size={11} />
-            </button>
-          )}
+                Delete
+              </MenuItem>
+            )}
+            {confirmDel && (
+              <MenuConfirm
+                message="Delete this lot? This cannot be undone."
+                confirmLabel="Delete"
+                onConfirm={onDelete}
+                onCancel={() => setConfirmDel(false)}
+              />
+            )}
+          </RowMenu>
         </div>
       </td>
     </tr>
@@ -1088,7 +1214,7 @@ function CoinRow({
 
       {/* Expanded lots */}
       {expanded &&
-        coin.lots.map((lot) =>
+        coin.lots.map((lot, lotIdx) =>
           editingId === lot._id ? (
             <tr
               key={lot._id}
@@ -1111,10 +1237,99 @@ function CoinRow({
               onDelete={() => onDeleteLot(lot._id)}
               onEdit={() => setEditingId(lot._id)}
               onSell={onSellLot}
+              menuOpenUp={lotIdx === coin.lots.length - 1}
             />
           ),
         )}
     </>
+  );
+}
+
+// ── Sell history row with dropdown actions ────────────────────────────────────
+function SellHistoryRow({ trade, menuOpenUp, onEdit, onDelete }) {
+  const [confirmDel, setConfirmDel] = useState(false);
+
+  const units = trade.tags
+    ?.find((tag) => tag.startsWith("units:"))
+    ?.split(":")[1];
+  const buyPrice = trade.tags
+    ?.find((tag) => tag.startsWith("buy:"))
+    ?.split(":")[1];
+
+  return (
+    <tr className="border-b border-white/[0.04] hover:bg-white/[0.025] transition-colors">
+      <td className="px-4 py-3 font-mono text-xs text-slate-500">
+        {new Date(trade.tradeDate || trade.createdAt).toLocaleDateString("en-US", {
+          day: "2-digit",
+          month: "short",
+          year: "numeric",
+        })}
+      </td>
+      <td className="px-4 py-3 font-mono text-xs text-white text-right">
+        {trade.coin}
+      </td>
+      <td className="px-4 py-3 font-mono text-xs text-slate-400 text-right tabular-nums">
+        {units ? fmtUnits(Number(units)) : "—"}
+      </td>
+      <td className="px-4 py-3 font-mono text-xs text-slate-500 text-right tabular-nums">
+        {buyPrice ? fmt$(Number(buyPrice)) : "—"}
+      </td>
+      <td className="px-4 py-3 font-mono text-xs text-slate-400 text-right tabular-nums">
+        {trade.exitPrice != null ? fmt$(trade.exitPrice) : fmt$(trade.entryPrice)}
+      </td>
+      <td className="px-4 py-3 font-mono text-xs text-white text-right tabular-nums">
+        {fmt$(trade.tradeAmount)}
+      </td>
+      <td
+        className={clsx(
+          "px-4 py-3 font-mono text-xs font-bold text-right tabular-nums",
+          pnlClass(trade.netPnl),
+        )}
+      >
+        {trade.netPnl >= 0 ? "+" : "-"}
+        {fmt$(trade.netPnl)}
+        {trade.netPnlPercent != null && (
+          <span className="ml-2 text-[10px] font-normal opacity-70">
+            {fmtPct(trade.netPnlPercent)}
+          </span>
+        )}
+      </td>
+      <td className="px-4 py-3">
+        <div className="flex justify-center">
+          <RowMenu
+            openUp={menuOpenUp}
+            label={`${trade.coin} sale actions`}
+            onClose={() => setConfirmDel(false)}
+          >
+            {!confirmDel && (
+              <MenuItem icon={Pencil} onSelect={onEdit}>
+                Edit sale
+              </MenuItem>
+            )}
+            {!confirmDel && (
+              <MenuItem
+                icon={Trash2}
+                tone="danger"
+                onSelect={() => {
+                  setConfirmDel(true);
+                  return true; // keep menu open for the confirm step
+                }}
+              >
+                Delete sale
+              </MenuItem>
+            )}
+            {confirmDel && (
+              <MenuConfirm
+                message="Delete this sale? Units return to the holding."
+                confirmLabel="Delete"
+                onConfirm={onDelete}
+                onCancel={() => setConfirmDel(false)}
+              />
+            )}
+          </RowMenu>
+        </div>
+      </td>
+    </tr>
   );
 }
 
@@ -1126,6 +1341,7 @@ export default function Portfolio() {
   const [sort, setSort] = useState({ col: "value", dir: "desc" });
   const [totalAssetInput, setTotalAssetInput] = useState("");
   const [editingSell, setEditingSell] = useState(null);
+  const [sellError, setSellError] = useState(null);
 
   // Holdings from MongoDB
   const { data: holdingsData, mutate: mutateHoldings } =
@@ -1327,13 +1543,11 @@ export default function Portfolio() {
   };
 
   const handleDeleteSell = async (id) => {
-    if (!confirm("Delete this sell record? This will also restore the units to the holding.")) {
-      return;
-    }
+    setSellError(null);
     const res = await fetch(`/api/portfolio/trades/${id}`, { method: "DELETE" });
-    const result = await res.json();
+    const result = await res.json().catch(() => ({}));
     if (!res.ok || !result.success) {
-      alert(result.error || "Failed to delete sell");
+      setSellError(result.error || "Failed to delete sale");
       return;
     }
     await mutateTrades();
@@ -1569,6 +1783,20 @@ export default function Portfolio() {
 
       {sellHistory.length > 0 && (
         <div className="glass-card overflow-hidden">
+          {sellError && (
+            <div className="flex items-center gap-2 border-b border-red-400/20 bg-red-400/[0.07] px-4 py-2.5 text-[12.5px] text-red-200">
+              <AlertCircle size={13} className="shrink-0" />
+              {sellError}
+              <button
+                type="button"
+                onClick={() => setSellError(null)}
+                className="ml-auto rounded-lg p-1 text-red-300/70 hover:bg-red-400/10 hover:text-red-200"
+                aria-label="Dismiss error"
+              >
+                <X size={12} />
+              </button>
+            </div>
+          )}
           <div className="flex items-center justify-between border-b border-white/[0.06] px-4 py-3">
             <div className="flex items-center gap-2">
               <FileText size={14} className="text-[#009E60]" />
@@ -1606,80 +1834,15 @@ export default function Portfolio() {
                 </tr>
               </thead>
               <tbody>
-                {sellHistory.map((trade) => {
-                  const units = trade.tags
-                    ?.find((tag) => tag.startsWith("units:"))
-                    ?.split(":")[1];
-                  const buyPrice = trade.tags
-                    ?.find((tag) => tag.startsWith("buy:"))
-                    ?.split(":")[1];
-
-                  return (
-                    <tr
-                      key={trade._id}
-                      className="border-b border-white/[0.04] hover:bg-white/[0.025] transition-colors group"
-                    >
-                      <td className="px-4 py-3 font-mono text-xs text-slate-500">
-                        {new Date(
-                          trade.tradeDate || trade.createdAt,
-                        ).toLocaleDateString("en-US", {
-                          day: "2-digit",
-                          month: "short",
-                          year: "numeric",
-                        })}
-                      </td>
-                      <td className="px-4 py-3 font-mono text-xs text-white text-right">
-                        {trade.coin}
-                      </td>
-                      <td className="px-4 py-3 font-mono text-xs text-slate-400 text-right tabular-nums">
-                        {units ? fmtUnits(Number(units)) : "—"}
-                      </td>
-                      <td className="px-4 py-3 font-mono text-xs text-slate-500 text-right tabular-nums">
-                        {buyPrice ? fmt$(Number(buyPrice)) : "—"}
-                      </td>
-                      <td className="px-4 py-3 font-mono text-xs text-slate-400 text-right tabular-nums">
-                        {trade.exitPrice != null
-                          ? fmt$(trade.exitPrice)
-                          : fmt$(trade.entryPrice)}
-                      </td>
-                      <td className="px-4 py-3 font-mono text-xs text-white text-right tabular-nums">
-                        {fmt$(trade.tradeAmount)}
-                      </td>
-                      <td
-                        className={clsx(
-                          "px-4 py-3 font-mono text-xs font-bold text-right tabular-nums",
-                          pnlClass(trade.netPnl),
-                        )}
-                      >
-                        {trade.netPnl >= 0 ? "+" : "-"}
-                        {fmt$(trade.netPnl)}
-                        {trade.netPnlPercent != null && (
-                          <span className="ml-2 text-[10px] font-normal opacity-70">
-                            {fmtPct(trade.netPnlPercent)}
-                          </span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="flex gap-1 justify-center opacity-60 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
-                          <button
-                            onClick={() => setEditingSell(trade)}
-                            className="p-1.5 rounded text-slate-400 hover:text-[#009E60] hover:bg-[rgba(0,158,96,0.12)] transition-colors"
-                            title="Edit sale"
-                          >
-                            <Pencil size={12} />
-                          </button>
-                          <button
-                            onClick={() => handleDeleteSell(trade._id)}
-                            className="p-1.5 rounded text-slate-400 hover:text-red-400 hover:bg-red-400/10 transition-colors"
-                            title="Delete sale"
-                          >
-                            <Trash2 size={12} />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
+                {sellHistory.map((trade, tradeIdx) => (
+                  <SellHistoryRow
+                    key={trade._id}
+                    trade={trade}
+                    menuOpenUp={tradeIdx === sellHistory.length - 1}
+                    onEdit={() => setEditingSell(trade)}
+                    onDelete={() => handleDeleteSell(trade._id)}
+                  />
+                ))}
               </tbody>
             </table>
           </div>
