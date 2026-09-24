@@ -6,12 +6,18 @@
 import Head from "next/head";
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
+import useSWR from "swr";
 import Layout from "@/components/Layout";
 import MarketPrices from "@/components/MarketPrices";
 import TimeZones from "@/components/TimeZones";
 import Bookmarks from "@/components/Bookmarks";
 import AuthGuard from "@/components/Auth/AuthGuard";
-import { TrendingUp, Activity, Wallet, Target, ArrowUpRight, Sparkles } from "lucide-react";
+import { TrendingUp, TrendingDown, Activity, Wallet, Target, Sparkles } from "lucide-react";
+
+const fmtMoney = (n) =>
+  n == null
+    ? "—"
+    : `${n < 0 ? "-" : "+"}$${Math.abs(n).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 function greeting() {
   const h = new Date().getHours();
@@ -22,6 +28,12 @@ function greeting() {
 }
 
 function DisciplineScore() {
+  // Live score derived from closed-trade win rate — no placeholders.
+  const { data } = useSWR("/api/journal/stats");
+  const stats = data?.data;
+  const hasData = stats && stats.totalTrades > 0;
+  const score = hasData ? Math.round(stats.winRate) : 0;
+
   return (
     <div className="p-5">
       <div className="flex items-center justify-between mb-4">
@@ -30,33 +42,74 @@ function DisciplineScore() {
           <Target size={13} className="text-emerald-300" />
         </span>
       </div>
-      <div className="flex items-end gap-2">
-        <span className="num text-4xl font-bold text-white tracking-tight">87</span>
-        <span className="num text-sm text-zinc-500 mb-1">/100</span>
-        <span className="ml-auto pill text-emerald-300 bg-emerald-400/10 border border-emerald-400/20">
-          <ArrowUpRight size={11} /> +3
-        </span>
-      </div>
-      <div className="mt-4 h-2 rounded-full bg-white/[0.06] overflow-hidden">
-        <div
-          className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-teal-300"
-          style={{ width: "87%" }}
-        />
-      </div>
-      <p className="mt-2.5 text-[12px] text-zinc-500">On track — keep following your plan.</p>
+      {hasData ? (
+        <>
+          <div className="flex items-end gap-2">
+            <span className="num text-4xl font-bold text-white tracking-tight">{score}</span>
+            <span className="num text-sm text-zinc-500 mb-1">/100</span>
+          </div>
+          <div className="mt-4 h-2 rounded-full bg-white/[0.06] overflow-hidden">
+            <div
+              className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-teal-300 transition-all"
+              style={{ width: `${score}%` }}
+            />
+          </div>
+          <p className="mt-2.5 text-[12px] text-zinc-500">
+            {stats.wins}W / {stats.losses}L across {stats.totalTrades} closed trades
+          </p>
+        </>
+      ) : (
+        <p className="text-[12.5px] text-zinc-500 leading-relaxed">
+          Close a trade in your journal and your score will appear here.
+        </p>
+      )}
     </div>
   );
 }
 
 function QuickStatsRail() {
-  const stats = [
-    { label: "Win rate", value: "64%", sub: "last 30 trades", icon: TrendingUp, tint: "text-emerald-300 bg-emerald-400/10 border-emerald-400/20" },
-    { label: "Active", value: "3", sub: "open positions", icon: Activity, tint: "text-sky-300 bg-sky-400/10 border-sky-400/20" },
-    { label: "Open P&L", value: "+$1,247", sub: "unrealized", icon: Wallet, tint: "text-emerald-300 bg-emerald-400/10 border-emerald-400/20" },
+  // Live data — updates the moment you add, close or delete a trade.
+  const { data: tradesData } = useSWR("/api/journal");
+  const { data: statsData } = useSWR("/api/journal/stats");
+  const trades = tradesData?.data || [];
+  const stats = statsData?.data;
+
+  const openTrades = trades.filter((t) => t.status === "OPEN");
+  const openPnl = openTrades.reduce((s, t) => s + (t.netPnl ?? 0), 0);
+  const hasClosed = stats && stats.totalTrades > 0;
+
+  const items = [
+    {
+      label: "Win rate",
+      value: hasClosed ? `${stats.winRate}%` : "—",
+      sub: hasClosed ? `${stats.wins}W / ${stats.losses}L` : "no closed trades",
+      icon: hasClosed && stats.winRate >= 50 ? TrendingUp : TrendingDown,
+      tint: hasClosed && stats.winRate >= 50
+        ? "text-emerald-300 bg-emerald-400/10 border-emerald-400/20"
+        : "text-zinc-400 bg-white/[0.05] border-white/[0.07]",
+    },
+    {
+      label: "Active",
+      value: String(openTrades.length),
+      sub: openTrades.length === 1 ? "open position" : "open positions",
+      icon: Activity,
+      tint: "text-sky-300 bg-sky-400/10 border-sky-400/20",
+    },
+    {
+      label: "Open P&L",
+      value: fmtMoney(openPnl),
+      sub: "unrealized",
+      icon: Wallet,
+      tint: openPnl > 0
+        ? "text-emerald-300 bg-emerald-400/10 border-emerald-400/20"
+        : openPnl < 0
+          ? "text-red-300 bg-red-400/10 border-red-400/20"
+          : "text-zinc-400 bg-white/[0.05] border-white/[0.07]",
+    },
   ];
   return (
     <div className="border-t border-white/[0.06] divide-y divide-white/[0.05]">
-      {stats.map((s) => (
+      {items.map((s) => (
         <div key={s.label} className="flex items-center gap-3 p-4">
           <span className={`w-9 h-9 rounded-xl border flex items-center justify-center shrink-0 ${s.tint}`}>
             <s.icon size={15} />
