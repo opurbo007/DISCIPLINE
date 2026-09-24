@@ -814,11 +814,13 @@ export default function Journal() {
       {/* ── Header ──────────────────────────────────────────────── */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <BookOpen size={18} className="text-[#f59e0b]" />
-          <h2 className="font-display text-3xl tracking-wider text-white">TRADE JOURNAL</h2>
-          <span className="text-xs font-mono text-slate-600 bg-white/5 px-2 py-0.5 rounded-full border border-white/8">
-            {trades.length} trades
+          <span className="w-10 h-10 rounded-2xl bg-amber-400/10 border border-amber-400/20 flex items-center justify-center">
+            <BookOpen size={18} className="text-amber-300" />
           </span>
+          <div>
+            <h2 className="text-[22px] font-bold tracking-tight text-white leading-none">Journal</h2>
+            <p className="text-[12.5px] text-zinc-500 mt-1">{trades.length} trades logged</p>
+          </div>
         </div>
         <div className="flex items-center gap-2">
           {localStats.totalPnl !== 0 && (

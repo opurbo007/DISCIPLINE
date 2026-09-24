@@ -1,18 +1,11 @@
 /**
  * components/MarketPrices/index.js
- * Terminal-style market data table. Dense rows, no cards, monospace everything.
+ * Modern market overview — clean rows, soft pills, real sparklines.
  */
 
 import { useState, useEffect, useRef } from "react";
 import useSWR from "swr";
-import {
-  RefreshCw,
-  AlertTriangle,
-  Wifi,
-  Clock,
-  TrendingUp,
-  TrendingDown,
-} from "lucide-react";
+import { RefreshCw, AlertTriangle, Wifi, Clock, TrendingUp, TrendingDown } from "lucide-react";
 import clsx from "clsx";
 
 const REFRESH_COOLDOWN = 30;
@@ -32,8 +25,8 @@ function fmtPrice(price) {
   if (price === null || price === undefined) return "—";
   const abs = Math.abs(price);
   if (abs >= 10000) return price.toLocaleString("en-US", { maximumFractionDigits: 0 });
-  if (abs >= 1000)  return price.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  if (abs >= 1)     return price.toFixed(2);
+  if (abs >= 1000) return price.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  if (abs >= 1) return price.toFixed(2);
   return price.toFixed(4);
 }
 
@@ -41,15 +34,8 @@ function pricePrefix(cat) {
   return ["crypto", "index", "bond", "commodity"].includes(cat) ? "$" : "";
 }
 
-const CATEGORY_LABEL = {
-  crypto:    "CRY",
-  index:     "IDX",
-  forex:     "FX",
-  bond:      "BND",
-  commodity: "CMD",
-};
+const CATEGORY_LABEL = { crypto: "Crypto", index: "Index", forex: "Forex", bond: "Bond", commodity: "Commodity" };
 
-// ── Flash effect: highlight price changes ─────────────────────────────────────
 function useFlash(value) {
   const [flash, setFlash] = useState(null);
   const prev = useRef(value);
@@ -61,65 +47,70 @@ function useFlash(value) {
     const dir = value > prev.current ? "up" : "down";
     prev.current = value;
     setFlash(dir);
-    const id = setTimeout(() => setFlash(null), 600);
+    const id = setTimeout(() => setFlash(null), 650);
     return () => clearTimeout(id);
   }, [value]);
   return flash;
 }
 
+function Sparkline({ positive, negative }) {
+  const points = positive
+    ? "0,20 10,18 20,15 30,13 40,14 50,9 60,6 70,8 80,4 90,3 100,1"
+    : negative
+    ? "0,3 10,5 20,4 30,8 40,7 50,11 60,12 70,14 80,15 90,17 100,19"
+    : "0,10 10,11 20,9 30,10 40,11 50,10 60,9 70,10 80,11 90,10 100,10";
+  const color = positive ? "#34d399" : negative ? "#f87171" : "#52525b";
+  const id = useRef(`g${Math.random().toString(36).slice(2)}`).current;
+  return (
+    <svg width="88" height="28" viewBox="0 0 100 22" preserveAspectRatio="none" className="overflow-visible">
+      <defs>
+        <linearGradient id={id} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={color} stopOpacity="0.35" />
+          <stop offset="100%" stopColor={color} stopOpacity="0" />
+        </linearGradient>
+      </defs>
+      <polygon points={`0,22 ${points} 100,22`} fill={`url(#${id})`} />
+      <polyline fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" points={points} />
+    </svg>
+  );
+}
+
 function PriceRow({ asset }) {
   const flash = useFlash(asset.price);
-
   const isPos = asset.change24h > 0;
   const isNeg = asset.change24h < 0;
 
   return (
     <div
       className={clsx(
-        "grid grid-cols-[40px_1fr_120px_100px] sm:grid-cols-[50px_1fr_140px_120px_80px] gap-3 items-center px-4 py-2.5 border-b border-white/5 hover:bg-white/[0.02] transition-colors",
-        flash === "up"   && "bg-emerald-400/5",
-        flash === "down" && "bg-red-400/5",
+        "grid grid-cols-[44px_minmax(0,1fr)_auto] sm:grid-cols-[48px_minmax(0,1fr)_130px_110px_96px] gap-3 items-center px-4 sm:px-5 py-3 border-b border-white/[0.05] last:border-0 transition-colors hover:bg-white/[0.025]",
+        flash === "up" && "bg-emerald-400/[0.06]",
+        flash === "down" && "bg-red-400/[0.06]"
       )}
     >
-      {/* Icon */}
-      <div className="w-8 h-8 rounded bg-white/5 border border-white/10 flex items-center justify-center font-mono text-sm font-bold text-slate-300">
+      <div className="w-10 h-10 rounded-xl bg-white/[0.05] border border-white/[0.07] flex items-center justify-center text-[15px] font-bold text-zinc-200">
         {asset.icon}
       </div>
-
-      {/* Symbol + name */}
       <div className="min-w-0">
-        <div className="flex items-center gap-2">
-          <span className="font-mono text-[12px] font-bold text-white tracking-wider">
-            {asset.symbol}
-          </span>
-          <span className="font-mono text-[9px] uppercase tracking-widest text-slate-600 px-1 border border-white/10">
+        <div className="flex items-center gap-2 min-w-0">
+          <span className="text-[13.5px] font-bold text-white tracking-tight truncate">{asset.symbol}</span>
+          <span className="hidden sm:inline text-[10.5px] font-medium text-zinc-500 bg-white/[0.05] border border-white/[0.07] rounded-full px-2 py-0.5">
             {CATEGORY_LABEL[asset.category] || asset.category}
           </span>
         </div>
-        <p className="font-mono text-[10px] text-slate-600 mt-0.5 truncate">{asset.name}</p>
+        <p className="text-[12px] text-zinc-500 truncate mt-0.5">{asset.name}</p>
       </div>
-
-      {/* Price */}
       <div className="text-right">
-        <p className="font-mono text-sm font-bold text-white tabular-nums">
+        <p className="num text-[14px] font-bold text-white">
           {pricePrefix(asset.category)}{fmtPrice(asset.price)}
         </p>
-      </div>
-
-      {/* Change */}
-      <div className="text-right">
-        <p className={clsx(
-          "font-mono text-[12px] font-semibold tabular-nums flex items-center justify-end gap-1",
-          isPos && "text-emerald-400",
-          isNeg && "text-red-400",
-          !isPos && !isNeg && "text-slate-500",
-        )}>
-          {isPos ? <TrendingUp size={10} /> : isNeg ? <TrendingDown size={10} /> : null}
-          {isPos ? "+" : ""}{asset.change24h.toFixed(2)}%
+        <p className="sm:hidden mt-0.5">
+          <ChangePill change={asset.change24h} />
         </p>
       </div>
-
-      {/* Sparkline placeholder slot (right column on sm+) */}
+      <div className="hidden sm:flex justify-end">
+        <ChangePill change={asset.change24h} />
+      </div>
       <div className="hidden sm:flex items-center justify-end">
         <Sparkline positive={isPos} negative={isNeg} />
       </div>
@@ -127,49 +118,43 @@ function PriceRow({ asset }) {
   );
 }
 
-function Sparkline({ positive, negative }) {
-  // Deterministic fake sparkline from a small seeded pattern
-  const points = positive
-    ? "0,20 10,18 20,15 30,12 40,14 50,8 60,5 70,7 80,3 90,2 100,0"
-    : negative
-    ? "0,2 10,5 20,4 30,8 40,6 50,10 60,12 70,14 80,16 90,18 100,20"
-    : "0,10 10,11 20,9 30,10 40,11 50,10 60,9 70,10 80,11 90,10 100,10";
-  const color = positive ? "#009E60" : negative ? "#ef4444" : "#475569";
+function ChangePill({ change }) {
+  const isPos = change > 0;
+  const isNeg = change < 0;
   return (
-    <svg width="60" height="20" viewBox="0 0 100 20" preserveAspectRatio="none">
-      <polyline
-        fill="none"
-        stroke={color}
-        strokeWidth="1.5"
-        points={points}
-      />
-    </svg>
+    <span
+      className={clsx(
+        "num inline-flex items-center gap-1 text-[12px] font-semibold px-2 py-1 rounded-lg border",
+        isPos && "text-emerald-300 bg-emerald-400/10 border-emerald-400/15",
+        isNeg && "text-red-300 bg-red-400/10 border-red-400/15",
+        !isPos && !isNeg && "text-zinc-400 bg-white/[0.05] border-white/[0.07]"
+      )}
+    >
+      {isPos ? <TrendingUp size={12} /> : isNeg ? <TrendingDown size={12} /> : null}
+      {isPos ? "+" : ""}{change.toFixed(2)}%
+    </span>
   );
 }
 
 function SkeletonRow() {
   return (
-    <div className="grid grid-cols-[40px_1fr_120px_100px] sm:grid-cols-[50px_1fr_140px_120px_80px] gap-3 items-center px-4 py-2.5 border-b border-white/5">
-      <div className="w-8 h-8 rounded shimmer-bg" />
-      <div className="space-y-1.5">
-        <div className="h-3 w-16 rounded shimmer-bg" />
-        <div className="h-2 w-24 rounded shimmer-bg" />
+    <div className="grid grid-cols-[44px_minmax(0,1fr)_auto] sm:grid-cols-[48px_minmax(0,1fr)_130px_110px_96px] gap-3 items-center px-5 py-3 border-b border-white/[0.05]">
+      <div className="w-10 h-10 rounded-xl shimmer-bg" />
+      <div className="space-y-2">
+        <div className="h-3 w-20 rounded-md shimmer-bg" />
+        <div className="h-2.5 w-32 rounded-md shimmer-bg" />
       </div>
-      <div className="h-4 w-20 rounded shimmer-bg ml-auto" />
-      <div className="h-3 w-14 rounded shimmer-bg ml-auto" />
-      <div className="hidden sm:block h-4 w-14 rounded shimmer-bg ml-auto" />
+      <div className="h-5 w-20 rounded-lg shimmer-bg ml-auto" />
+      <div className="hidden sm:block h-6 w-20 rounded-lg shimmer-bg ml-auto" />
+      <div className="hidden sm:block h-7 w-20 rounded-md shimmer-bg ml-auto" />
     </div>
   );
 }
 
 export default function MarketPrices() {
   const cooldown = useRefreshCooldown(REFRESH_COOLDOWN);
-
   const { data, error, isLoading, isValidating, mutate } = useSWR("/api/prices", {
-    refreshInterval: (latestData) => {
-      if (!latestData) return 300000;
-      return latestData.marketOpen === false ? 600000 : 300000;
-    },
+    refreshInterval: (latestData) => (!latestData ? 300000 : latestData.marketOpen === false ? 600000 : 300000),
     revalidateOnFocus: false,
     revalidateOnReconnect: false,
     keepPreviousData: true,
@@ -179,134 +164,74 @@ export default function MarketPrices() {
   const apiErrors = data?.errors || [];
   const hasErrors = apiErrors.length > 0;
   const isStale = data?.stale === true;
-  const marketOpen = data?.marketOpen !== false;
-  const ttlMins = marketOpen ? "5 min" : "10 min";
-
-  // Group by category for visual separation
-  const groups = {
-    crypto:    markets.filter(m => m.category === "crypto"),
-    index:     markets.filter(m => m.category === "index"),
-    commodity: markets.filter(m => m.category === "commodity"),
-    bond:      markets.filter(m => m.category === "bond"),
-    forex:     markets.filter(m => m.category === "forex"),
-  };
-
-  const handleRefresh = () => {
-    if (cooldown.onCooldown) return;
-    cooldown.start();
-    mutate();
-  };
-
   const lastUpdate = data?.timestamp ? new Date(data.timestamp) : null;
-  const lastUpdateStr = lastUpdate?.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false });
+  const lastUpdateStr = lastUpdate?.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: false });
+
+  const order = ["crypto", "index", "forex", "commodity", "bond"];
+  const groups = order
+    .map((cat) => ({ cat, items: markets.filter((m) => m.category === cat) }))
+    .filter((g) => g.items.length > 0);
+
+  const label = { crypto: "Crypto", index: "Indices", forex: "Currencies", commodity: "Commodities", bond: "Bonds" };
 
   return (
     <div>
-      {/* ── Status bar (Bloomberg header) ──────────────────────────── */}
-      <div className="flex items-center justify-between px-4 py-2 bg-white/[0.02] border-b border-white/10">
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-1.5">
-            {isValidating ? (
-              <RefreshCw size={10} className="text-[#009E60] animate-spin" />
-            ) : (
-              <div className="w-1.5 h-1.5 rounded-full bg-[#009E60] animate-pulse" />
-            )}
-            <span className="font-mono text-[10px] uppercase tracking-widest text-[#009E60] font-semibold">
-              {isValidating ? "Syncing" : "Live"}
-            </span>
-          </div>
-          <span className="font-mono text-[10px] text-slate-600 uppercase tracking-widest">
-            {markets.length} instruments
+      <div className="flex flex-wrap items-center gap-3 px-5 py-4 border-b border-white/[0.06] bg-white/[0.015]">
+        <div className="flex items-center gap-2.5">
+          <span className="relative flex w-2.5 h-2.5">
+            <span className="absolute inline-flex w-full h-full rounded-full bg-emerald-400 opacity-60 animate-ping" />
+            <span className="relative inline-flex w-2.5 h-2.5 rounded-full bg-emerald-400" />
           </span>
-          {!marketOpen && (
-            <span className="font-mono text-[10px] text-amber-400/80 uppercase tracking-widest flex items-center gap-1">
-              <Clock size={9} /> Mkt Closed
-            </span>
-          )}
-          {isStale && (
-            <span className="font-mono text-[10px] text-amber-500 uppercase tracking-widest">
-              Stale
-            </span>
-          )}
+          <h2 className="text-[14px] font-semibold text-white tracking-tight">
+            {isValidating ? "Updating…" : "Market overview"}
+          </h2>
+          <span className="pill bg-white/[0.05] text-zinc-400 border border-white/[0.07] num">{markets.length}</span>
         </div>
-
-        <div className="flex items-center gap-3">
-          {lastUpdateStr && (
-            <span className="font-mono text-[10px] text-slate-600 tabular-nums uppercase tracking-widest">
-              {lastUpdateStr}
-            </span>
-          )}
+        <div className="ml-auto flex items-center gap-2">
+          {lastUpdateStr && <span className="num hidden sm:inline text-[12px] text-zinc-500">Updated {lastUpdateStr}</span>}
+          {isStale && <span className="pill text-amber-300 bg-amber-400/10 border border-amber-400/20">Delayed</span>}
           <button
-            onClick={handleRefresh}
+            onClick={() => { if (!cooldown.onCooldown) { cooldown.start(); mutate(); } }}
             disabled={cooldown.onCooldown || isValidating}
-            className={clsx(
-              "font-mono text-[10px] uppercase tracking-widest px-2 py-1 border border-white/10 text-slate-400 hover:text-white hover:border-white/20 transition-colors flex items-center gap-1.5",
-              (cooldown.onCooldown || isValidating) && "opacity-40 cursor-not-allowed",
-            )}
+            className="btn-secondary !px-3 !py-1.5 !text-[12px] !rounded-lg disabled:opacity-50"
           >
-            <RefreshCw size={9} className={isValidating ? "animate-spin" : ""} />
+            <RefreshCw size={12} className={isValidating ? "animate-spin" : ""} />
             {cooldown.onCooldown ? `${cooldown.remaining}s` : "Refresh"}
           </button>
         </div>
       </div>
 
-      {/* ── Column headers ─────────────────────────────────────────── */}
-      <div className="hidden sm:grid grid-cols-[50px_1fr_140px_120px_80px] gap-3 px-4 py-2 border-b border-white/10 bg-black">
-        <span className="font-mono text-[9px] uppercase tracking-widest text-slate-600">Sym</span>
-        <span className="font-mono text-[9px] uppercase tracking-widest text-slate-600">Instrument</span>
-        <span className="font-mono text-[9px] uppercase tracking-widest text-slate-600 text-right">Last</span>
-        <span className="font-mono text-[9px] uppercase tracking-widest text-slate-600 text-right">24h Δ</span>
-        <span className="font-mono text-[9px] uppercase tracking-widest text-slate-600 text-right">Trend</span>
-      </div>
-
-      {/* ── Error / status banners ─────────────────────────────────── */}
       {hasErrors && !isLoading && (
-        <div className="mx-4 mt-3 flex items-start gap-2 text-[11px] text-amber-400/80 bg-amber-400/5 border border-amber-400/20 px-3 py-2">
-          <AlertTriangle size={11} className="mt-0.5 shrink-0 text-amber-400" />
-          <span className="font-mono">{apiErrors.join(" • ")}</span>
+        <div className="m-4 flex items-start gap-2 text-[12.5px] text-amber-200 bg-amber-400/[0.07] border border-amber-400/20 rounded-xl px-3.5 py-2.5">
+          <AlertTriangle size={14} className="mt-0.5 shrink-0" />
+          {apiErrors.join(" • ")}
         </div>
       )}
       {error && (
-        <div className="mx-4 mt-3 flex items-center gap-2 text-red-400 text-xs bg-red-400/5 border border-red-400/20 px-3 py-2">
-          <Wifi size={12} />
-          <span className="font-mono">Failed to reach price API. Check your connection.</span>
+        <div className="m-4 flex items-center gap-2 text-red-200 text-[12.5px] bg-red-400/[0.07] border border-red-400/20 rounded-xl px-3.5 py-2.5">
+          <Wifi size={14} /> Couldn&apos;t reach the price feed. Check your connection.
         </div>
       )}
 
-      {/* ── Grouped data rows ──────────────────────────────────────── */}
       <div>
         {isLoading ? (
-          Array.from({ length: 12 }).map((_, i) => <SkeletonRow key={i} />)
+          Array.from({ length: 8 }).map((_, i) => <SkeletonRow key={i} />)
         ) : (
-          Object.entries(groups).map(([cat, items]) =>
-            items.length === 0 ? null : (
-              <div key={cat}>
-                <div className="px-4 py-1.5 bg-white/[0.015] border-b border-white/5 flex items-center gap-2">
-                  <span className="font-mono text-[9px] uppercase tracking-widest text-slate-500 font-semibold">
-                    {cat === "index" ? "Indices" :
-                     cat === "crypto" ? "Crypto" :
-                     cat === "commodity" ? "Commodities" :
-                     cat === "bond" ? "Bonds" :
-                     cat === "forex" ? "Forex" : cat}
-                  </span>
-                  <span className="font-mono text-[9px] text-slate-700">·</span>
-                  <span className="font-mono text-[9px] text-slate-700">{items.length}</span>
-                </div>
-                {items.map((asset) => <PriceRow key={asset.id} asset={asset} />)}
+          groups.map(({ cat, items }) => (
+            <div key={cat}>
+              <div className="px-5 py-2.5 bg-white/[0.015] border-y border-white/[0.05] first:border-t-0 flex items-center gap-2">
+                <span className="text-[11.5px] font-semibold text-zinc-400 uppercase tracking-wide">{label[cat] || cat}</span>
+                <span className="num text-[11px] text-zinc-600 bg-white/[0.05] rounded-full px-1.5">{items.length}</span>
               </div>
-            ),
-          )
+              {items.map((asset) => <PriceRow key={asset.id} asset={asset} />)}
+            </div>
+          ))
         )}
       </div>
 
-      {/* ── Footer ─────────────────────────────────────────────────── */}
-      <div className="px-4 py-2 border-t border-white/10 flex items-center justify-between bg-white/[0.01]">
-        <p className="font-mono text-[9px] text-slate-700 uppercase tracking-widest">
-          Auto-refresh · {ttlMins} · Server-cached
-        </p>
-        <p className="font-mono text-[9px] text-slate-700 uppercase tracking-widest">
-          Source: CoinGecko + Finnhub + ECB
-        </p>
+      <div className="px-5 py-3 border-t border-white/[0.06] flex items-center justify-between bg-white/[0.01]">
+        <p className="text-[11.5px] text-zinc-600 flex items-center gap-1.5"><Clock size={11} /> Auto-refresh · cached</p>
+        <p className="text-[11.5px] text-zinc-600">CoinGecko · Finnhub · ECB</p>
       </div>
     </div>
   );

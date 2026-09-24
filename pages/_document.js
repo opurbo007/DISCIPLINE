@@ -20,10 +20,10 @@ export default function Document() {
         <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📊</text></svg>" />
 
         {/* SEO meta tags */}
-        <meta name="description" content="A glassmorphic trading discipline dashboard with live market prices, notes, and bookmarks." />
+        <meta name="description" content="A modern trading discipline dashboard with live prices, portfolio tracking, journal and notes." />
         <meta property="og:title" content="Trading Discipline Dashboard" />
-        <meta property="og:description" content="Live prices • Time zones • Bookmarks • Notes" />
-        <meta name="theme-color" content="#080c14" />
+        <meta property="og:description" content="Live prices • Portfolio • Journal • Notes" />
+        <meta name="theme-color" content="#07090d" />
       </Head>
       <body>
         <Main />

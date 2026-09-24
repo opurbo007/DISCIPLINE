@@ -6,102 +6,62 @@ module.exports = {
   ],
   theme: {
     extend: {
-      // ── Color Palette ──────────────────────────────────────────────────
       colors: {
-        // Deep backgrounds
-        void:    "#04080f",
-        abyss:   "#080c14",
-        surface: "#0d1117",
-        panel:   "#111827",
-
-        // Accent – neon green (primary accent)
-        arc: {
-          DEFAULT: "#009E60",
-          dim:     "#007a4a",
-          glow:    "rgba(0,158,96,0.15)",
+        base: {
+          950: "#07090d",
+          900: "#0b0e14",
+          850: "#10141d",
+          800: "#161c28",
+          700: "#1e2635",
         },
-
-        // Accent – amber gold
-        ember: {
-          DEFAULT: "#f59e0b",
-          dim:     "#d97706",
-          glow:    "rgba(245,158,11,0.15)",
-        },
-
-        // Semantic
-        bull:  "#009E60",   // gains / positive
-        bear:  "#ef4444",   // losses / negative
-
-        // Neutral glass tints
-        glass: {
-          border:  "rgba(255,255,255,0.07)",
-          muted:   "rgba(255,255,255,0.04)",
-          white:   "rgba(255,255,255,0.08)",
+        brand: {
+          300: "#6ee7b7",
+          400: "#34d399",
+          500: "#10b981",
+          600: "#059669",
         },
       },
-
-      // ── Typography ─────────────────────────────────────────────────────
       fontFamily: {
-        mono:    ["'Space Mono'", "monospace"],
-        display: ["'Bebas Neue'", "sans-serif"],
-        body:    ["'DM Sans'", "sans-serif"],
+        sans: ["Inter", "ui-sans-serif", "system-ui", "-apple-system", "sans-serif"],
+        mono: ["'JetBrains Mono'", "ui-monospace", "monospace"],
+        display: ["Inter", "ui-sans-serif", "system-ui", "sans-serif"],
+        body: ["Inter", "ui-sans-serif", "system-ui", "sans-serif"],
       },
-
-      // ── Blur & backdrop ────────────────────────────────────────────────
-      backdropBlur: {
-        xs: "4px",
-        glass: "16px",
-      },
-
-      // ── Box shadows ────────────────────────────────────────────────────
       boxShadow: {
-        "glass-arc":   "0 0 0 1px rgba(0,158,96,0.15), 0 8px 32px rgba(0,0,0,0.4)",
-        "glass-ember": "0 0 0 1px rgba(245,158,11,0.15), 0 8px 32px rgba(0,0,0,0.4)",
-        "glass-plain": "0 0 0 1px rgba(255,255,255,0.07), 0 8px 32px rgba(0,0,0,0.4)",
-        "inner-glow":  "inset 0 1px 0 rgba(255,255,255,0.08)",
+        card: "0 1px 2px rgba(0,0,0,0.4), 0 8px 24px -8px rgba(0,0,0,0.5)",
+        pop: "0 12px 40px -8px rgba(0,0,0,0.6)",
+        glow: "0 0 24px rgba(16,185,129,0.25)",
       },
-
-      // ── Animations ─────────────────────────────────────────────────────
+      borderRadius: {
+        xl2: "1.25rem",
+      },
       keyframes: {
         "fade-up": {
-          "0%":   { opacity: "0", transform: "translateY(12px)" },
+          "0%": { opacity: "0", transform: "translateY(10px)" },
           "100%": { opacity: "1", transform: "translateY(0)" },
         },
-        "pulse-arc": {
-          "0%, 100%": { boxShadow: "0 0 0 0 rgba(0,158,96,0)" },
-          "50%":       { boxShadow: "0 0 0 4px rgba(0,158,96,0.25)" },
-        },
         shimmer: {
-          "0%":   { backgroundPosition: "-200% 0" },
+          "0%": { backgroundPosition: "-200% 0" },
           "100%": { backgroundPosition: "200% 0" },
         },
-        flicker: {
-          "0%, 100%": { opacity: "1" },
-          "50%":       { opacity: "0.85" },
-        },
         ticker: {
-          "0%":   { transform: "translateX(0)" },
+          "0%": { transform: "translateX(0)" },
           "100%": { transform: "translateX(-33.333%)" },
+        },
+        float: {
+          "0%, 100%": { transform: "translateY(0)" },
+          "50%": { transform: "translateY(-8px)" },
         },
       },
       animation: {
-        "fade-up":    "fade-up 0.5s ease forwards",
-        "pulse-arc":  "pulse-arc 2s ease infinite",
-        shimmer:      "shimmer 2s linear infinite",
-        flicker:      "flicker 3s ease-in-out infinite",
-        ticker:       "ticker 30s linear infinite",
+        "fade-up": "fade-up 0.45s cubic-bezier(0.22,1,0.36,1) both",
+        shimmer: "shimmer 1.8s linear infinite",
+        ticker: "ticker 32s linear infinite",
+        float: "float 7s ease-in-out infinite",
       },
-
-      // ── Gradients ──────────────────────────────────────────────────────
       backgroundImage: {
-        "grid-pattern":
-          "linear-gradient(rgba(0,158,96,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(0,158,96,0.04) 1px, transparent 1px)",
-        "noise-overlay":
-          "url(\"data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E\")",
-      },
-
-      backgroundSize: {
-        grid: "32px 32px",
+        "mesh-emerald":
+          "radial-gradient(600px 300px at 15% 0%, rgba(16,185,129,0.12), transparent 70%), radial-gradient(700px 340px at 85% 10%, rgba(99,102,241,0.1), transparent 70%)",
       },
     },
   },

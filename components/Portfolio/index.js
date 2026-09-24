@@ -1349,14 +1349,18 @@ export default function Portfolio() {
       {/* ── Header ──────────────────────────────────────────────────── */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <Wallet size={18} className="text-[#009E60]" />
-          <h2 className="font-display text-3xl tracking-wider text-white">
-            MY PORTFOLIO
-          </h2>
-          <span className="text-xs font-mono text-slate-600 bg-white/5 px-2 py-0.5 rounded-full border border-white/8">
-            {aggregated.length} coin{aggregated.length !== 1 ? "s" : ""} ·{" "}
-            {holdings.length} lot{holdings.length !== 1 ? "s" : ""}
+          <span className="w-10 h-10 rounded-2xl bg-emerald-400/10 border border-emerald-400/20 flex items-center justify-center">
+            <Wallet size={18} className="text-emerald-300" />
           </span>
+          <div>
+            <h2 className="text-[22px] font-bold tracking-tight text-white leading-none">
+              Portfolio
+            </h2>
+            <p className="text-[12.5px] text-zinc-500 mt-1">
+              {aggregated.length} coin{aggregated.length !== 1 ? "s" : ""} ·{" "}
+              {holdings.length} lot{holdings.length !== 1 ? "s" : ""}
+            </p>
+          </div>
         </div>
         <div className="flex items-center gap-2">
           <button

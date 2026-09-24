@@ -1,17 +1,17 @@
 /**
  * components/Bookmarks/index.js
- * Terminal-style bookmark manager. Right-rail list of compact rows.
+ * Modern bookmark list.
  */
 
 import { useState } from "react";
 import useSWR from "swr";
-import { Plus, ExternalLink, Pencil, Trash2, X, Check, Globe } from "lucide-react";
+import { Plus, ExternalLink, Pencil, Trash2, X, Check, Compass } from "lucide-react";
 import clsx from "clsx";
 
 const CATEGORIES = ["all", "charting", "news", "broker", "data", "education", "tools", "general"];
 
-function FaviconImg({ url, size = 12 }) {
-  const src = `https://www.google.com/s2/favicons?domain=${encodeURIComponent(url)}&sz=32`;
+function FaviconImg({ url, size = 16 }) {
+  const src = `https://www.google.com/s2/favicons?domain=${encodeURIComponent(url)}&sz=64`;
   return (
     // eslint-disable-next-line @next/next/no-img-element
     <img
@@ -20,75 +20,43 @@ function FaviconImg({ url, size = 12 }) {
       width={size}
       height={size}
       onError={(e) => { e.currentTarget.style.display = "none"; }}
-      className="shrink-0 grayscale opacity-70"
+      className="shrink-0 rounded-md"
     />
   );
 }
 
 function BookmarkForm({ initial = {}, onSubmit, onCancel, loading }) {
   const [form, setForm] = useState({
-    title:       initial.title       || "",
-    url:         initial.url         || "",
+    title: initial.title || "",
+    url: initial.url || "",
     description: initial.description || "",
-    category:    initial.category    || "general",
+    category: initial.category || "general",
   });
-
   const set = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }));
-
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!form.title.trim() || !form.url.trim()) return;
     const url = /^https?:\/\//i.test(form.url) ? form.url : `https://${form.url}`;
     onSubmit({ ...form, url });
   };
-
   return (
-    <form onSubmit={handleSubmit} className="p-3 space-y-2 border-b border-white/10 bg-white/[0.02]">
-      <input
-        className="w-full bg-black border border-white/10 px-2 py-1.5 text-[11px] font-mono text-white placeholder-slate-600 focus:border-[#009E60] focus:outline-none"
-        placeholder="Title"
-        value={form.title}
-        onChange={set("title")}
-        required
-      />
-      <input
-        className="w-full bg-black border border-white/10 px-2 py-1.5 text-[11px] font-mono text-white placeholder-slate-600 focus:border-[#009E60] focus:outline-none"
-        placeholder="https://..."
-        value={form.url}
-        onChange={set("url")}
-        required
-      />
+    <form onSubmit={handleSubmit} className="p-4 space-y-2.5 border-b border-white/[0.06] bg-white/[0.02]">
+      <input className="glass-input !py-2 !text-[13px]" placeholder="Title — e.g. TradingView" value={form.title} onChange={set("title")} required />
+      <input className="glass-input !py-2 !text-[13px]" placeholder="https://…" value={form.url} onChange={set("url")} required />
       <div className="grid grid-cols-2 gap-2">
-        <input
-          className="w-full bg-black border border-white/10 px-2 py-1.5 text-[11px] font-mono text-white placeholder-slate-600 focus:border-[#009E60] focus:outline-none"
-          placeholder="Description"
-          value={form.description}
-          onChange={set("description")}
-        />
-        <select
-          className="w-full bg-black border border-white/10 px-2 py-1.5 text-[11px] font-mono text-white focus:border-[#009E60] focus:outline-none"
-          value={form.category}
-          onChange={set("category")}
-        >
+        <input className="glass-input !py-2 !text-[13px]" placeholder="Note (optional)" value={form.description} onChange={set("description")} />
+        <select className="glass-input !py-2 !text-[13px]" value={form.category} onChange={set("category")}>
           {CATEGORIES.filter((c) => c !== "all").map((c) => (
-            <option key={c} value={c} className="bg-black">{c}</option>
+            <option key={c} value={c} className="bg-[#10141d] capitalize">{c}</option>
           ))}
         </select>
       </div>
-      <div className="flex gap-1.5">
-        <button
-          type="submit"
-          disabled={loading}
-          className="flex-1 font-mono text-[10px] uppercase tracking-widest text-[#009E60] border border-[#009E60]/40 bg-[#009E60]/10 hover:bg-[#009E60]/20 px-2 py-1.5 flex items-center justify-center gap-1.5 transition-colors"
-        >
-          <Check size={10} /> {loading ? "Saving" : "Save"}
+      <div className="flex gap-2">
+        <button type="submit" disabled={loading} className="btn-primary flex-1 !py-2 !text-[12.5px]">
+          <Check size={13} /> {loading ? "Saving…" : "Save"}
         </button>
-        <button
-          type="button"
-          onClick={onCancel}
-          className="flex-1 font-mono text-[10px] uppercase tracking-widest text-slate-400 border border-white/10 hover:text-white hover:border-white/20 px-2 py-1.5 flex items-center justify-center gap-1.5 transition-colors"
-        >
-          <X size={10} /> Cancel
+        <button type="button" onClick={onCancel} className="btn-secondary flex-1 !py-2 !text-[12.5px]">
+          <X size={13} /> Cancel
         </button>
       </div>
     </form>
@@ -97,68 +65,40 @@ function BookmarkForm({ initial = {}, onSubmit, onCancel, loading }) {
 
 function BookmarkRow({ bookmark, onDelete, onEdit, editing, setEditing, saving }) {
   const [confirmDelete, setConfirmDelete] = useState(false);
-
   if (editing) {
     return (
       <BookmarkForm
         initial={bookmark}
-        onSubmit={async (data) => {
-          await onEdit(bookmark._id, data);
-          setEditing(false);
-        }}
+        onSubmit={async (data) => { await onEdit(bookmark._id, data); setEditing(false); }}
         onCancel={() => setEditing(false)}
         loading={saving}
       />
     );
   }
-
   return (
-    <div className="group flex items-center gap-2 px-4 py-2 border-b border-white/5 hover:bg-white/[0.02] transition-colors">
-      <FaviconImg url={bookmark.url} size={12} />
-      <a
-        href={bookmark.url}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="flex-1 min-w-0 font-mono text-[11px] text-white hover:text-[#009E60] transition-colors truncate flex items-center gap-1.5"
-      >
-        {bookmark.title}
-        <ExternalLink size={9} className="text-slate-600 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
-      </a>
-      <span className="font-mono text-[8px] uppercase tracking-widest text-slate-500 px-1 border border-white/10 shrink-0">
-        {bookmark.category.slice(0, 4)}
+    <div className="group flex items-center gap-2.5 px-4 py-2.5 border-b border-white/[0.05] last:border-0 hover:bg-white/[0.03] transition-colors">
+      <span className="w-7 h-7 rounded-lg bg-white/[0.05] border border-white/[0.07] flex items-center justify-center shrink-0 overflow-hidden">
+        <FaviconImg url={bookmark.url} size={14} />
       </span>
-
+      <a href={bookmark.url} target="_blank" rel="noopener noreferrer" className="flex-1 min-w-0">
+        <span className="block text-[13px] font-medium text-zinc-100 group-hover:text-emerald-300 transition-colors truncate">
+          {bookmark.title}
+        </span>
+        <span className="block text-[11px] text-zinc-600 truncate">{bookmark.url.replace(/^https?:\/\//, "")}</span>
+      </a>
+      <ExternalLink size={12} className="text-zinc-700 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
       <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
-        <button
-          onClick={() => setEditing(true)}
-          className="p-1 text-slate-500 hover:text-[#009E60] transition-colors"
-          title="Edit"
-        >
-          <Pencil size={10} />
+        <button onClick={() => setEditing(true)} className="p-1.5 rounded-lg text-zinc-500 hover:text-emerald-300 hover:bg-white/[0.06] transition-colors" title="Edit">
+          <Pencil size={12} />
         </button>
         {confirmDelete ? (
           <>
-            <button
-              onClick={() => onDelete(bookmark._id)}
-              className="p-1 text-red-400 hover:text-red-300 transition-colors"
-              title="Confirm"
-            >
-              <Check size={10} />
-            </button>
-            <button
-              onClick={() => setConfirmDelete(false)}
-              className="p-1 text-slate-500 hover:text-white transition-colors"
-            >
-              <X size={10} />
-            </button>
+            <button onClick={() => onDelete(bookmark._id)} className="p-1.5 rounded-lg text-red-300 hover:bg-red-400/10" title="Confirm"><Check size={12} /></button>
+            <button onClick={() => setConfirmDelete(false)} className="p-1.5 rounded-lg text-zinc-500 hover:bg-white/[0.06]"><X size={12} /></button>
           </>
         ) : (
-          <button
-            onClick={() => setConfirmDelete(true)}
-            className="p-1 text-slate-500 hover:text-red-400 transition-colors"
-            title="Delete"
-          >
-            <Trash2 size={10} />
+          <button onClick={() => setConfirmDelete(true)} className="p-1.5 rounded-lg text-zinc-500 hover:text-red-300 hover:bg-red-400/10 transition-colors" title="Delete">
+            <Trash2 size={12} />
           </button>
         )}
       </div>
@@ -167,101 +107,63 @@ function BookmarkRow({ bookmark, onDelete, onEdit, editing, setEditing, saving }
 }
 
 export default function Bookmarks() {
-  const [showForm,     setShowForm]     = useState(false);
-  const [adding,       setAdding]       = useState(false);
+  const [showForm, setShowForm] = useState(false);
+  const [adding, setAdding] = useState(false);
   const [activeFilter, setActiveFilter] = useState("all");
-  const [editingId,    setEditingId]    = useState(null);
-  const [saving,       setSaving]       = useState(false);
+  const [editingId, setEditingId] = useState(null);
+  const [saving, setSaving] = useState(false);
 
   const { data, mutate } = useSWR("/api/bookmarks");
   const bookmarks = data?.data || [];
-
   const existingCats = ["all", ...new Set(bookmarks.map((b) => b.category))];
-
-  const filtered = activeFilter === "all"
-    ? bookmarks
-    : bookmarks.filter((b) => b.category === activeFilter);
+  const filtered = activeFilter === "all" ? bookmarks : bookmarks.filter((b) => b.category === activeFilter);
 
   const handleAdd = async (formData) => {
     setAdding(true);
     try {
-      await fetch("/api/bookmarks", {
-        method:  "POST",
-        headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify(formData),
-      });
+      await fetch("/api/bookmarks", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(formData) });
       await mutate();
       setShowForm(false);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setAdding(false);
-    }
+    } finally { setAdding(false); }
   };
-
   const handleDelete = async (id) => {
-    mutate(
-      { data: bookmarks.filter((b) => b._id !== id) },
-      { revalidate: false }
-    );
+    mutate({ data: bookmarks.filter((b) => b._id !== id) }, { revalidate: false });
     await fetch(`/api/bookmarks/${id}`, { method: "DELETE" });
     mutate();
   };
-
   const handleEdit = async (id, formData) => {
     setSaving(true);
-    await fetch(`/api/bookmarks/${id}`, {
-      method:  "PUT",
-      headers: { "Content-Type": "application/json" },
-      body:    JSON.stringify(formData),
-    });
+    await fetch(`/api/bookmarks/${id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(formData) });
     await mutate();
     setSaving(false);
   };
 
   return (
     <div>
-      {/* ── Status bar ─────────────────────────────────────────── */}
-      <div className="flex items-center justify-between px-4 py-2 border-b border-white/10 bg-white/[0.01]">
-        <div className="flex items-center gap-2 font-mono text-[9px] uppercase tracking-widest text-slate-500">
-          <span>{bookmarks.length} items</span>
-          {activeFilter !== "all" && (
-            <>
-              <span className="text-slate-700">·</span>
-              <span className="text-[#009E60]">{activeFilter}</span>
-            </>
-          )}
-        </div>
+      <div className="flex items-center justify-between px-4 py-3">
+        <span className="text-[12px] text-zinc-500 font-medium num">{bookmarks.length} saved</span>
         <button
           onClick={() => setShowForm((v) => !v)}
-          className="font-mono text-[9px] uppercase tracking-widest text-[#009E60] hover:text-white border border-[#009E60]/40 hover:border-white/20 px-2 py-1 flex items-center gap-1 transition-colors"
+          className={clsx("inline-flex items-center gap-1.5 text-[12px] font-semibold px-3 py-1.5 rounded-lg transition-all", showForm ? "bg-white/[0.07] text-white" : "bg-emerald-400 text-[#04120c] hover:bg-emerald-300")}
         >
-          {showForm ? <X size={9} /> : <Plus size={9} />}
-          {showForm ? "Cancel" : "Add"}
+          {showForm ? <X size={12} /> : <Plus size={12} />}
+          {showForm ? "Close" : "Add link"}
         </button>
       </div>
 
-      {/* ── Add form ────────────────────────────────────────────── */}
-      {showForm && (
-        <BookmarkForm
-          onSubmit={handleAdd}
-          onCancel={() => setShowForm(false)}
-          loading={adding}
-        />
-      )}
+      {showForm && <BookmarkForm onSubmit={handleAdd} onCancel={() => setShowForm(false)} loading={adding} />}
 
-      {/* ── Filter pills ────────────────────────────────────────── */}
       {bookmarks.length > 0 && (
-        <div className="flex flex-wrap gap-1 px-3 py-2 border-b border-white/5 bg-black">
+        <div className="flex flex-wrap gap-1.5 px-4 pb-3">
           {existingCats.map((cat) => (
             <button
               key={cat}
               onClick={() => setActiveFilter(cat)}
               className={clsx(
-                "font-mono text-[9px] uppercase tracking-widest px-1.5 py-0.5 border transition-colors",
+                "text-[11.5px] font-medium px-2.5 py-1 rounded-full border transition-all capitalize",
                 activeFilter === cat
-                  ? "border-[#009E60] text-[#009E60] bg-[#009E60]/10"
-                  : "border-white/10 text-slate-500 hover:text-white hover:border-white/20"
+                  ? "bg-white text-zinc-950 border-white"
+                  : "bg-white/[0.04] text-zinc-500 border-white/[0.07] hover:text-white hover:border-white/15"
               )}
             >
               {cat}
@@ -270,26 +172,17 @@ export default function Bookmarks() {
         </div>
       )}
 
-      {/* ── List ────────────────────────────────────────────────── */}
       {filtered.length === 0 ? (
-        <div className="px-4 py-8 text-center">
-          <Globe size={20} className="mx-auto text-slate-700 mb-2" />
-          <p className="font-mono text-[10px] text-slate-600 uppercase tracking-widest">
-            {bookmarks.length === 0 ? "No bookmarks yet" : "Empty category"}
-          </p>
+        <div className="px-4 py-10 text-center">
+          <span className="mx-auto w-10 h-10 rounded-2xl bg-white/[0.04] border border-white/[0.07] flex items-center justify-center mb-3">
+            <Compass size={17} className="text-zinc-600" />
+          </span>
+          <p className="text-[13px] text-zinc-500">{bookmarks.length === 0 ? "No links yet — save your favorite tools." : "Nothing in this category."}</p>
         </div>
       ) : (
-        filtered.map((bm) => (
-          <BookmarkRow
-            key={bm._id}
-            bookmark={bm}
-            onDelete={handleDelete}
-            onEdit={handleEdit}
-            editing={editingId === bm._id}
-            setEditing={(v) => setEditingId(v ? bm._id : null)}
-            saving={saving}
-          />
-        ))
+        <div className="pb-1">{filtered.map((bm) => (
+          <BookmarkRow key={bm._id} bookmark={bm} onDelete={handleDelete} onEdit={handleEdit} editing={editingId === bm._id} setEditing={(v) => setEditingId(v ? bm._id : null)} saving={saving} />
+        ))}</div>
       )}
     </div>
   );
