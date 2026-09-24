@@ -31,8 +31,9 @@ function fmtPrice(price) {
 }
 
 function TickerTape() {
+  // Fetch once — no polling (free-server safe; ticker is decorative).
   const { data } = useSWR("/api/prices", {
-    refreshInterval: 120_000,
+    refreshInterval: 0,
     revalidateOnFocus: false,
     revalidateOnReconnect: false,
   });

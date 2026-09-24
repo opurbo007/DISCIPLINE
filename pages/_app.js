@@ -29,9 +29,13 @@ export default function App({ Component, pageProps: { session, ...pageProps } })
       <SWRConfig
         value={{
           fetcher,
+          // Free-server safe: never poll, never refetch on focus/reconnect,
+          // dedupe identical requests for 5 min, retry failures only once.
           revalidateOnFocus: false,
-          dedupingInterval: 60_000,
-          errorRetryCount: 3,
+          revalidateOnReconnect: false,
+          refreshInterval: 0,
+          dedupingInterval: 300_000,
+          errorRetryCount: 1,
         }}
       >
         <Component {...pageProps} />

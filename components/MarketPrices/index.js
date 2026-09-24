@@ -153,8 +153,10 @@ function SkeletonRow() {
 
 export default function MarketPrices() {
   const cooldown = useRefreshCooldown(REFRESH_COOLDOWN);
+  // Manual refresh only — no polling (free-server safe: avoids hammering
+  // CoinGecko/Finnhub and burning serverless execution hours).
   const { data, error, isLoading, isValidating, mutate } = useSWR("/api/prices", {
-    refreshInterval: (latestData) => (!latestData ? 300000 : latestData.marketOpen === false ? 600000 : 300000),
+    refreshInterval: 0,
     revalidateOnFocus: false,
     revalidateOnReconnect: false,
     keepPreviousData: true,
@@ -230,7 +232,7 @@ export default function MarketPrices() {
       </div>
 
       <div className="px-5 py-3 border-t border-white/[0.06] flex items-center justify-between bg-white/[0.01]">
-        <p className="text-[11.5px] text-zinc-600 flex items-center gap-1.5"><Clock size={11} /> Auto-refresh · cached</p>
+        <p className="text-[11.5px] text-zinc-600 flex items-center gap-1.5"><Clock size={11} /> Manual refresh · server-cached</p>
         <p className="text-[11.5px] text-zinc-600">CoinGecko · Finnhub · ECB</p>
       </div>
     </div>

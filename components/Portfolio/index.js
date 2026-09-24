@@ -1172,8 +1172,10 @@ export default function Portfolio() {
     data: priceData,
     isLoading: pricesLoading,
     mutate: mutatePrices,
+  // Live prices for exactly the coins in this user's portfolio.
+  // Manual refresh only — no polling (free-server safe).
   } = useSWR("/api/portfolio/prices", {
-    refreshInterval: 120_000,
+    refreshInterval: 0,
     revalidateOnFocus: false,
     revalidateOnReconnect: false,
   });
