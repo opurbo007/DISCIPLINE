@@ -165,8 +165,9 @@ function AssetAllocationPanel({
   totalInvested,
   totalValue,
   pnl,
+  onAdjust,
 }) {
-  // totalAsset = fixed TOTAL capital (invariant — buying never changes it).
+  // totalAsset = total capital (grows/shrinks with realized sell P&L).
   // Cash left is derived: total - invested cost.
   const totalCapital = totalAsset;
   const cashLeft = totalCapital - totalInvested;
@@ -192,10 +193,18 @@ function AssetAllocationPanel({
               TOTAL ASSET
             </h3>
           </div>
+          <button
+            type="button"
+            onClick={onAdjust}
+            className="mt-2.5 inline-flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-1.5 text-[11px] font-mono font-semibold text-slate-300 hover:bg-white/[0.08] hover:text-white transition-colors"
+          >
+            <Plus size={12} className="text-[#009E60]" />
+            Add Profit / Loss
+          </button>
         </div>
 
         <label className="w-full lg:w-64">
-          <span className="field-label">Total Capital (USD) — stays fixed when you buy</span>
+          <span className="field-label">Total Capital (USD) — sells add profit / subtract loss</span>
           <div className="relative">
             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-600 font-mono text-sm">
               $
@@ -221,7 +230,7 @@ function AssetAllocationPanel({
             {fmt$(totalCapital)}
           </p>
           <p className="mt-1 text-xs font-mono text-slate-600">
-            fixed capital (buying never changes this)
+            total capital (sell P&L settles here)
           </p>
         </div>
 
@@ -857,6 +866,145 @@ function EditSellModal({ trade, onClose, onSave }) {
   );
 }
 
+// ── Adjust total asset modal (manual profit / loss) ──────────────────────────
+// Sends a signed adjustment to /api/user/asset which $inc's totalAsset,
+// so profit increases total and loss decreases it.
+function AdjustAssetModal({ currentTotal = 0, onClose, onConfirm }) {
+  const [mode, setMode] = useState("profit");
+  const [amount, setAmount] = useState("");
+  const [error, setError] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  const parsed = parseFloat(amount);
+  const valid = Number.isFinite(parsed) && parsed > 0;
+  const signed = valid ? (mode === "profit" ? parsed : -parsed) : 0;
+  const newTotal = (Number(currentTotal) || 0) + signed;
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!valid) {
+      setError("Enter an amount greater than 0.");
+      return;
+    }
+    setError("");
+    setSaving(true);
+    try {
+      await onConfirm(signed);
+      onClose();
+    } catch (err) {
+      setError(err.message || "Failed to adjust asset");
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Modal
+      open
+      onClose={onClose}
+      title="ADJUST TOTAL ASSET"
+      subtitle="Add a manual profit or loss — it settles directly into your total capital."
+    >
+      <form onSubmit={handleSubmit} className="space-y-4">
+        {/* Profit / Loss toggle */}
+        <div className="grid grid-cols-2 gap-2 rounded-xl border border-white/10 bg-white/[0.03] p-1.5">
+          <button
+            type="button"
+            onClick={() => setMode("profit")}
+            className={clsx(
+              "flex items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-xs font-mono font-bold transition-colors",
+              mode === "profit"
+                ? "bg-emerald-400/15 text-emerald-300 border border-emerald-400/25"
+                : "text-slate-500 hover:text-slate-300 border border-transparent",
+            )}
+          >
+            <TrendingUp size={13} /> + Profit
+          </button>
+          <button
+            type="button"
+            onClick={() => setMode("loss")}
+            className={clsx(
+              "flex items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-xs font-mono font-bold transition-colors",
+              mode === "loss"
+                ? "bg-red-400/15 text-red-300 border border-red-400/25"
+                : "text-slate-500 hover:text-slate-300 border border-transparent",
+            )}
+          >
+            <TrendingDown size={13} /> − Loss
+          </button>
+        </div>
+
+        <div>
+          <label className="field-label">Amount (USD) *</label>
+          <div className="relative">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-600 font-mono text-sm">
+              $
+            </span>
+            <input
+              type="number"
+              step="any"
+              min="0"
+              className="glass-input font-mono pl-6"
+              placeholder="100"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              autoFocus
+              required
+            />
+          </div>
+          <p className="mt-1.5 text-[10px] font-mono text-slate-600">
+            Current total: {fmt$(Number(currentTotal) || 0)}
+            {valid && (
+              <>
+                {"  →  "}
+                <span className={pnlClass(signed)}>
+                  {fmt$(newTotal)} ({mode === "profit" ? "+" : "−"}
+                  {fmt$(parsed)})
+                </span>
+              </>
+            )}
+          </p>
+        </div>
+
+        {error && (
+          <p className="text-xs text-red-400 font-mono flex items-center gap-1.5">
+            <AlertCircle size={12} className="shrink-0" />
+            {error}
+          </p>
+        )}
+
+        <div className="flex gap-2 pt-1">
+          <button
+            type="submit"
+            className={clsx(
+              "flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl px-3 py-2 text-[13px] font-semibold transition-colors",
+              mode === "profit"
+                ? "bg-emerald-500/20 border border-emerald-400/30 text-emerald-200 hover:bg-emerald-500/30"
+                : "bg-red-500/15 border border-red-400/30 text-red-200 hover:bg-red-500/25",
+            )}
+            disabled={saving}
+          >
+            {saving ? (
+              <Loader2 size={13} className="animate-spin" />
+            ) : mode === "profit" ? (
+              <TrendingUp size={13} />
+            ) : (
+              <TrendingDown size={13} />
+            )}
+            {saving
+              ? "Saving…"
+              : mode === "profit"
+                ? "Add Profit"
+                : "Apply Loss"}
+          </button>
+          <button type="button" className="btn-ghost" onClick={onClose}>
+            <X size={13} /> Cancel
+          </button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
 // ── Row action dropdown (⋯) — works on touch, no hover needed ──────────────────
 // Renders its menu above table clipping; closes on outside click / Escape.
 function RowMenu({ openUp, label = "Row actions", onClose, children }) {
@@ -1342,6 +1490,7 @@ export default function Portfolio() {
   const [totalAssetInput, setTotalAssetInput] = useState("");
   const [editingSell, setEditingSell] = useState(null);
   const [sellError, setSellError] = useState(null);
+  const [showAdjustModal, setShowAdjustModal] = useState(false);
 
   // Holdings from MongoDB
   const { data: holdingsData, mutate: mutateHoldings } =
@@ -1516,6 +1665,7 @@ export default function Portfolio() {
     await mutateHoldings();
     await mutatePrices();
     await mutateTrades();
+    await mutateAsset();
   };
 
   const handleEdit = async (id, data) => {
@@ -1540,6 +1690,7 @@ export default function Portfolio() {
     }
     await mutateTrades();
     await mutateHoldings();
+    await mutateAsset();
   };
 
   const handleDeleteSell = async (id) => {
@@ -1552,6 +1703,29 @@ export default function Portfolio() {
     }
     await mutateTrades();
     await mutateHoldings();
+    await mutateAsset();
+  };
+
+  const handleAdjustAsset = async (signedAmount) => {
+    const res = await fetch("/api/user/asset", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ adjustment: signedAmount }),
+    });
+    const result = await res.json().catch(() => ({}));
+    if (!res.ok || !result.success) {
+      throw new Error(result.error || "Failed to adjust asset");
+    }
+    // Sync input + SWR cache with the server-computed total.
+    if (result.data?.totalAsset != null) {
+      setTotalAssetInput(String(result.data.totalAsset));
+      await mutateAsset(
+        { success: true, data: { totalAsset: result.data.totalAsset } },
+        { revalidate: false },
+      );
+    } else {
+      await mutateAsset();
+    }
   };
 
   const coinsWithoutPrice = aggregated
@@ -1603,6 +1777,7 @@ export default function Portfolio() {
         totalInvested={stats.totalInvested}
         totalValue={stats.totalValue}
         pnl={stats.pnl}
+        onAdjust={() => setShowAdjustModal(true)}
       />
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
@@ -1854,6 +2029,14 @@ export default function Portfolio() {
           trade={editingSell}
           onClose={() => setEditingSell(null)}
           onSave={handleEditSell}
+        />
+      )}
+
+      {showAdjustModal && (
+        <AdjustAssetModal
+          currentTotal={totalAsset}
+          onClose={() => setShowAdjustModal(false)}
+          onConfirm={handleAdjustAsset}
         />
       )}
 

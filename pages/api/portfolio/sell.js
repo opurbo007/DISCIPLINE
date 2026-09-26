@@ -22,6 +22,7 @@ import { authOptions } from "@/pages/api/auth/[...nextauth]";
 import dbConnect from "@/lib/mongodb";
 import Holding from "@/lib/models/Holding";
 import Trade from "@/lib/models/Trade";
+import User from "@/lib/models/User";
 
 export default async function handler(req, res) {
   // ── Auth guard ──────────────────────────────────────────────────────────────
@@ -83,9 +84,9 @@ export default async function handler(req, res) {
       tags: [`holding:${holdingId}`, `units:${sellUnits}`, `buy:${purchasePrice}`, "portfolio"],
       tradeDate: sellDate ? new Date(sellDate) : new Date(),
     });
-    // NOTE: User.totalAsset is the fixed TOTAL capital (invariant).
-    // Selling only shrinks the holding — cash is derived as total - invested,
-    // so no cash adjustment is needed here.
+    // NOTE: Realized P&L settles into total capital — profit increases it,
+    // loss decreases it. Cash stays derived as total - invested.
+    await User.updateOne({ _id: userId }, { $inc: { totalAsset: pnl } });
 
     // Update or delete the holding
     if (remainingUnits <= 0) {
@@ -97,7 +98,7 @@ export default async function handler(req, res) {
 
     return res.status(200).json({
       success: true,
-      data: { trade, remainingHolding: remainingUnits <= 0 ? null : holding },
+      data: { trade, remainingHolding: remainingUnits <= 0 ? null : holding, realizedPnl: pnl },
     });
   } catch (err) {
     console.error("[POST /api/portfolio/sell]", err);

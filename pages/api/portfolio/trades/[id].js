@@ -20,6 +20,7 @@ import { authOptions } from "@/pages/api/auth/[...nextauth]";
 import dbConnect from "@/lib/mongodb";
 import Trade from "@/lib/models/Trade";
 import Holding from "@/lib/models/Holding";
+import User from "@/lib/models/User";
 import mongoose from "mongoose";
 
 export default async function handler(req, res) {
@@ -74,16 +75,19 @@ export default async function handler(req, res) {
         return res.status(400).json({ success: false, error: "Sell price must be > 0" });
       }
 
-      // NOTE: User.totalAsset is the fixed TOTAL capital (invariant),
-      // so editing a sell only updates the trade + holding — no cash delta.
+      // Realized P&L delta settles into total capital:
+      // profit increase / loss decrease must follow edits.
       const oldUnitsTag = (existing.tags || []).find((t) => t.startsWith("units:"));
       const oldUnits = oldUnitsTag ? Number(oldUnitsTag.split(":")[1]) : null;
+      const oldPnl = Number(existing.netPnl) || 0;
       const newTradeAmount = newUnits * newPrice;
+      const newPnl = (newPrice - buyPrice) * newUnits;
+      const pnlDelta = newPnl - oldPnl;
 
       // Update Trade fields
       existing.exitPrice = newPrice;
       existing.tradeAmount = newTradeAmount;
-      existing.netPnl = (newPrice - buyPrice) * newUnits;
+      existing.netPnl = newPnl;
       existing.tradeDate = newDate;
       existing.closedAt = newDate;
       if (notes != null) existing.outcome = notes;
@@ -99,6 +103,11 @@ export default async function handler(req, res) {
       existing.tags = newTags;
 
       await existing.save();
+
+      // Settle the P&L difference into total capital.
+      if (Math.abs(pnlDelta) > 1e-12) {
+        await User.updateOne({ _id: userId }, { $inc: { totalAsset: pnlDelta } });
+      }
 
       // If the trade references a holding, sync the holding's units to reflect
       // the new sell size (so the holding table stays consistent).
@@ -131,8 +140,12 @@ export default async function handler(req, res) {
       const trade = await Trade.findOneAndDelete({ _id: id, userId });
       if (!trade) return res.status(404).json({ success: false, error: "Not found" });
 
-      // Deleting a sell only removes the trade + restores holding units.
-      // Total capital is invariant, so no cash adjustment is needed.
+      // Deleting a sell reverses its settled P&L from total capital
+      // and restores holding units.
+      const realizedPnl = Number(trade.netPnl) || 0;
+      if (Math.abs(realizedPnl) > 1e-12) {
+        await User.updateOne({ _id: userId }, { $inc: { totalAsset: -realizedPnl } });
+      }
 
       // Restore holding units
       const holdingTag = (trade.tags || []).find((t) => t.startsWith("holding:"));

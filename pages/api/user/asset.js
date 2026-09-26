@@ -1,8 +1,11 @@
 /**
  * pages/api/user/asset.js
  * ─────────────────────────────────────────────────────────────────────────────
- *  GET  /api/user/asset  → Return the user's fixed total capital (USD)
- *  POST /api/user/asset  → Update the user's fixed total capital
+ *  GET  /api/user/asset  → Return the user's total capital (USD)
+ *  POST /api/user/asset  → Update the user's total capital. Accepts either:
+ *    { totalAsset: number }  → set absolute value (manual edit of input)
+ *    { adjustment: number }  → increment/decrement by signed amount
+ *                              (sell P&L settlement, manual profit/loss dialog)
  */
 
 import { getServerSession } from "next-auth/next";
@@ -30,7 +33,25 @@ export default async function handler(req, res) {
   }
 
   if (req.method === "POST") {
-    const { totalAsset } = req.body;
+    const { totalAsset, adjustment } = req.body;
+
+    // ── Increment / decrement mode (manual P/L dialog, sell settlement) ──
+    if (adjustment !== undefined) {
+      const delta = Number(adjustment);
+      if (!Number.isFinite(delta) || delta === 0) {
+        return res.status(400).json({ success: false, error: "Invalid adjustment value" });
+      }
+      try {
+        await User.updateOne({ _id: userId }, { $inc: { totalAsset: delta } });
+        const user = await User.findById(userId).select("totalAsset").lean();
+        return res.status(200).json({ success: true, data: { totalAsset: user?.totalAsset ?? 0 } });
+      } catch (err) {
+        console.error("[POST /api/user/asset]", err);
+        return res.status(500).json({ success: false, error: "Failed to update asset" });
+      }
+    }
+
+    // ── Absolute set mode (typing in the Total Capital input) ──
     if (typeof totalAsset !== "number" || isNaN(totalAsset)) {
       return res.status(400).json({ success: false, error: "Invalid totalAsset value" });
     }

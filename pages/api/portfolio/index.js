@@ -58,9 +58,8 @@ export default async function handler(req, res) {
         notes: notes || "",
       });
 
-      // NOTE: User.totalAsset is the fixed TOTAL capital (invariant).
-      // Buying only creates a holding — cash is derived as total - invested,
-      // so no cash adjustment is needed here.
+      // NOTE: Buying only creates a holding — cash is derived as total - invested,
+      // so no totalAsset adjustment is needed here. Only sells adjust totalAsset.
       return res.status(201).json({ success: true, data: holding });
     } catch (err) {
       if (err.name === "ValidationError") {
