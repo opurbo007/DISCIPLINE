@@ -6,9 +6,11 @@
  *  Commands (all suggested via setMyCommands + reply keyboard):
  *    /start [code]  — link account (code from web app) or welcome back
  *    /link <code>   — same as /start <code>
- *    /portfolio     — portfolio summary (total, invested, value, P&L)
- *    /holdings      — per-coin holdings with live values
- *    /pnl           — total P&L only
+ *    /portfolio     — portfolio summary (total, invested, value, P&L) [linked]
+ *    /holdings      — per-coin holdings with live values [linked]
+ *    /pnl           — total P&L only [linked]
+ *    /price SYMBOL  — live coin price, e.g. /price BTC (public)
+ *    /feargreed     — Crypto Fear & Greed index (public)
  *    /help          — command list
  *    /unlink        — disconnect this chat
  *
@@ -139,6 +141,37 @@ function holdingsMessage(p) {
   return `<b>💰 Holdings (${p.coins.length} coins)</b>\n${lines.join("\n")}${more}`;
 }
 
+// ── Public price lookup (no link needed — CoinGecko, 1 call) ──
+const SYMBOL_TO_ID = {
+  BTC: "bitcoin",
+  ETH: "ethereum",
+  SOL: "solana",
+  LINK: "chainlink",
+  DOGE: "dogecoin",
+  XRP: "ripple",
+  ONDO: "ondo-finance",
+};
+
+async function fetchCoinPrice(coinId) {
+  const url =
+    `https://api.coingecko.com/api/v3/simple/price` +
+    `?ids=${encodeURIComponent(coinId)}&vs_currencies=usd` +
+    `&include_24hr_change=true&precision=2`;
+  const res = await fetch(url, { headers: { Accept: "application/json" } });
+  if (!res.ok) throw new Error(`CoinGecko ${res.status}`);
+  const data = await res.json();
+  return data?.[coinId] || null;
+}
+
+async function fetchFearGreed() {
+  const res = await fetch("https://api.alternative.me/fng/?limit=2&format=json", {
+    headers: { Accept: "application/json" },
+  });
+  if (!res.ok) throw new Error(`FearGreed ${res.status}`);
+  const json = await res.json();
+  return json?.data || [];
+}
+
 export default async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(200).json({ ok: true, commands: BOT_COMMANDS.map((c) => c.command) });
@@ -214,6 +247,54 @@ export default async function handler(req, res) {
     // ── /help ──
     if (command === "/help" || command === "/commands") {
       await sendMessage(chatId, helpText());
+      return res.status(200).json({ ok: true });
+    }
+
+    // ── /feargreed (public — no link needed) ──
+    if (command === "/feargreed" || command === "/fng" || command === "/fear") {
+      try {
+        const list = await fetchFearGreed();
+        const cur = list[0];
+        if (!cur) throw new Error("empty");
+        const prev = list[1];
+        const delta = prev ? Number(cur.value) - Number(prev.value) : null;
+        await sendMessage(
+          chatId,
+          `<b>😨 Fear &amp; Greed: ${escapeHtml(cur.value)} · ${escapeHtml(cur.value_classification || "")}</b>` +
+            (delta == null ? "" : `\n${delta > 0 ? "+" : ""}${delta} vs yesterday`),
+        );
+      } catch {
+        await sendMessage(chatId, "Sentiment unavailable right now. Try again later.");
+      }
+      return res.status(200).json({ ok: true });
+    }
+
+    // ── /price SYMBOL (public — no link needed) ──
+    if (command === "/price" || command === "/p") {
+      const raw = (args[0] || "").trim().toUpperCase();
+      if (!raw) {
+        await sendMessage(
+          chatId,
+          `Usage: <code>/price BTC</code>\nSupported: ${escapeHtml(Object.keys(SYMBOL_TO_ID).join(", "))}`,
+        );
+        return res.status(200).json({ ok: true });
+      }
+      const coinId = SYMBOL_TO_ID[raw] || raw.toLowerCase().replace(/[^a-z0-9-]/g, "");
+      try {
+        const q = await fetchCoinPrice(coinId);
+        if (!q?.usd) throw new Error("not found");
+        const chg = Number(q.usd_24h_change) || 0;
+        const sign = chg >= 0 ? "+" : "";
+        await sendMessage(
+          chatId,
+          `<b>${escapeHtml(raw)}</b>: <b>${escapeHtml(fmt$(q.usd))}</b>\n24h: ${sign}${chg.toFixed(2)}%`,
+        );
+      } catch {
+        await sendMessage(
+          chatId,
+          `No price for <b>${escapeHtml(raw)}</b>. Try: ${escapeHtml(Object.keys(SYMBOL_TO_ID).join(", "))}`,
+        );
+      }
       return res.status(200).json({ ok: true });
     }
 

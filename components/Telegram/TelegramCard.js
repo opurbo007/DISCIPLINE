@@ -8,7 +8,7 @@ import { useState } from "react";
 import useSWR from "swr";
 import { Send, Copy, Check, RefreshCw, Unlink, Loader2, Terminal, Sparkles } from "lucide-react";
 
-const SUGGESTED = ["/start", "/portfolio", "/holdings", "/pnl", "/help", "/unlink"];
+const SUGGESTED = ["/start", "/portfolio", "/holdings", "/price BTC", "/feargreed", "/pnl", "/help", "/unlink"];
 
 export default function TelegramCard() {
   const { data, mutate, isLoading } = useSWR("/api/telegram/link-code");
