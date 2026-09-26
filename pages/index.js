@@ -10,6 +10,7 @@ import useSWR from "swr";
 import Layout from "@/components/Layout";
 import MarketPrices from "@/components/MarketPrices";
 import TimeZones from "@/components/TimeZones";
+import TelegramCard from "@/components/Telegram/TelegramCard";
 import Bookmarks from "@/components/Bookmarks";
 import AuthGuard from "@/components/Auth/AuthGuard";
 import { TrendingUp, TrendingDown, Activity, Wallet, Target, Sparkles } from "lucide-react";
@@ -167,6 +168,9 @@ export default function Dashboard() {
       <p className="px-4 py-3 text-[11.5px] text-zinc-600 leading-relaxed border-t border-white/[0.06]">
         London &amp; New York overlap is usually the most volatile window.
       </p>
+      <div className="border-t border-white/[0.06]">
+        <TelegramCard />
+      </div>
     </div>
   );
 
