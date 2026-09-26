@@ -123,6 +123,12 @@ export default function LoginPage() {
               </button>
             </form>
 
+            <p className="text-right mt-3">
+              <Link href="/forgot-password" className="text-[13px] text-zinc-500 hover:text-emerald-300 transition-colors">
+                Forgot password?
+              </Link>
+            </p>
+
             <div className="flex items-center gap-3 my-6">
               <div className="flex-1 h-px bg-white/[0.07]" />
               <span className="text-zinc-600 text-[11px] font-medium uppercase tracking-wide">or</span>
