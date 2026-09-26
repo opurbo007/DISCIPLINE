@@ -47,7 +47,7 @@ const FINNHUB_KEY = process.env.FINNHUB_KEY || "";
 
 const COINGECKO_URL =
   "https://api.coingecko.com/api/v3/simple/price" +
-  "?ids=bitcoin,ethereum,solana,chainlink,dogecoin,ripple,sui" +
+  "?ids=bitcoin,ethereum,solana,chainlink,dogecoin,ripple,ondo-finance" +
   "&vs_currencies=usd" +
   "&include_24hr_change=true" +
   "&precision=2";
@@ -88,11 +88,11 @@ const CRYPTO_META = {
     icon: "⬡",
     category: "crypto",
   },
-  sui: {
-    id: "sui",
-    symbol: "SUI",
-    name: "Sui",
-    icon: "💧",
+  "ondo-finance": {
+    id: "ondo-finance",
+    symbol: "ONDO",
+    name: "Ondo",
+    icon: "O",
     category: "crypto",
   },
   dogecoin: {

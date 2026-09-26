@@ -17,9 +17,10 @@ function nowIn(tz) {
 }
 
 function fmtHM(t) {
-  const h = String(t.h).padStart(2, "0");
+  const suffix = t.h >= 12 ? "PM" : "AM";
+  const h12 = t.h % 12 === 0 ? 12 : t.h % 12;
   const m = String(t.m).padStart(2, "0");
-  return `${h}:${m}`;
+  return `${h12}:${m} ${suffix}`;
 }
 
 function fmtCountdown(totalMins) {
@@ -125,7 +126,7 @@ function SessionRow({ market, time }) {
     );
   }
   const { status, progress, detail } = getSessionInfo(time, market);
-  const timeStr = time.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false });
+  const timeStr = time.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true });
 
   return (
     <div className="px-3 py-2">

@@ -167,7 +167,7 @@ export default function MarketPrices() {
   const hasErrors = apiErrors.length > 0;
   const isStale = data?.stale === true;
   const lastUpdate = data?.timestamp ? new Date(data.timestamp) : null;
-  const lastUpdateStr = lastUpdate?.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: false });
+  const lastUpdateStr = lastUpdate?.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: true });
 
   const order = ["crypto", "index", "forex", "commodity", "bond"];
   const groups = order
