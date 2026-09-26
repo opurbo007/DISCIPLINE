@@ -9,6 +9,7 @@ import { useSession } from "next-auth/react";
 import useSWR from "swr";
 import Layout from "@/components/Layout";
 import MarketPrices from "@/components/MarketPrices";
+import FearGreed from "@/components/FearGreed";
 import TimeZones from "@/components/TimeZones";
 import TelegramCard from "@/components/Telegram/TelegramCard";
 import Bookmarks from "@/components/Bookmarks";
@@ -168,8 +169,13 @@ export default function Dashboard() {
       <p className="px-4 py-3 text-[11.5px] text-zinc-600 leading-relaxed border-t border-white/[0.06]">
         London &amp; New York overlap is usually the most volatile window.
       </p>
-      <div className="border-t border-white/[0.06]">
-        <TelegramCard />
+      <div className="border-t border-white/[0.06] px-2 py-1.5">
+        <details>
+          <summary className="cursor-pointer list-none px-2.5 py-2 rounded-xl text-[12px] font-semibold text-zinc-400 hover:text-white hover:bg-white/[0.05] transition-colors">
+            Telegram bot <span className="text-zinc-600 font-normal">· tap to expand</span>
+          </summary>
+          <TelegramCard />
+        </details>
       </div>
     </div>
   );
@@ -197,6 +203,7 @@ export default function Dashboard() {
       </Head>
       <Layout activePage="dashboard" sidebar={sidebar} rightRail={rightRail}>
         <PageHeader name={session?.user?.name} />
+        <FearGreed />
         <section id="prices" className="scroll-mt-28 card overflow-hidden">
           <MarketPrices />
         </section>
