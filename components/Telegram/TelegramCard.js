@@ -6,13 +6,15 @@
 
 import { useState } from "react";
 import useSWR from "swr";
-import { Send, Copy, Check, RefreshCw, Unlink, Loader2, Terminal } from "lucide-react";
+import { Send, Copy, Check, RefreshCw, Unlink, Loader2, Terminal, Sparkles } from "lucide-react";
 
-const SUGGESTED = ["/portfolio", "/holdings", "/pnl", "/help"];
+const SUGGESTED = ["/start", "/portfolio", "/holdings", "/pnl", "/help", "/unlink"];
 
 export default function TelegramCard() {
   const { data, mutate, isLoading } = useSWR("/api/telegram/link-code");
   const [busy, setBusy] = useState(false);
+  const [suggesting, setSuggesting] = useState(false);
+  const [suggestedOk, setSuggestedOk] = useState(false);
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState("");
 
@@ -60,6 +62,23 @@ export default function TelegramCard() {
       setTimeout(() => setCopied(false), 1500);
     } catch {
       setError("Copy failed — select the code manually.");
+    }
+  };
+
+  const enableSuggestions = async () => {
+    setSuggesting(true);
+    setSuggestedOk(false);
+    setError("");
+    try {
+      const res = await fetch("/api/telegram/setup", { method: "POST" });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok || !json.success) throw new Error(json.error || "Failed to enable suggestions");
+      setSuggestedOk(true);
+      setTimeout(() => setSuggestedOk(false), 2500);
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setSuggesting(false);
     }
   };
 
@@ -146,6 +165,18 @@ export default function TelegramCard() {
             </span>
           ))}
         </div>
+        <button
+          onClick={enableSuggestions}
+          disabled={suggesting}
+          className="btn-ghost w-full !text-[12px] mt-2.5"
+          title="Registers / commands + bot description so Telegram shows suggestions when you type /"
+        >
+          {suggesting ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
+          {suggestedOk ? "Suggestions enabled ✓" : "Enable Telegram suggestions"}
+        </button>
+        <p className="mt-1.5 text-[11px] text-zinc-600 leading-relaxed">
+          One click registers the / menu + bot bio. Then type / in chat or tap the buttons under messages.
+        </p>
       </div>
     </div>
   );

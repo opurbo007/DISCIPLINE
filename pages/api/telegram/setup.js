@@ -11,7 +11,7 @@
 
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/pages/api/auth/[...nextauth]";
-import { BOT_COMMANDS, setBotCommands } from "@/lib/telegram";
+import { BOT_COMMANDS, setBotCommands, setBotMeta } from "@/lib/telegram";
 
 export default async function handler(req, res) {
   if (req.method === "GET") {
@@ -25,6 +25,12 @@ export default async function handler(req, res) {
 
   try {
     await setBotCommands();
+    // Profile text so users see what the bot can do before even typing "/".
+    try {
+      await setBotMeta();
+    } catch (e) {
+      console.warn("[telegram/setup] meta:", e.message);
+    }
     return res.status(200).json({ success: true, data: { commands: BOT_COMMANDS } });
   } catch (err) {
     console.error("[telegram/setup]", err);
