@@ -19,6 +19,8 @@ import {
   ChevronDown as ChevronDownIcon,
   BookOpen,
   Search,
+  Activity,
+  Settings,
 } from "lucide-react";
 import clsx from "clsx";
 
@@ -99,7 +101,9 @@ function TopBar({ activePage }) {
   const navLinks = [
     { href: "/", label: "Overview", key: "dashboard", icon: LayoutDashboard },
     { href: "/portfolio", label: "Portfolio", key: "portfolio", icon: Wallet },
+    { href: "/market", label: "Market Read", key: "market", icon: Activity },
     { href: "/journal", label: "Journal", key: "journal", icon: BookOpen },
+    { href: "/settings", label: "Settings", key: "settings", icon: Settings },
   ];
 
   return (
