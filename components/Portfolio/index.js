@@ -28,10 +28,18 @@ import CoinSearch from "./CoinSearch";
 import Modal from "@/components/UI/Modal";
 
 // ── Formatters
-const fmt$ = (n, dp = 2) =>
+const fmt$ = (n, dp) =>
   n == null
     ? "—"
-    : `$${Math.abs(n).toLocaleString("en-US", { minimumFractionDigits: dp, maximumFractionDigits: dp })}`;
+    : n < 0.0001
+      ? `$${n.toFixed(8)}`
+      : n < 0.01
+        ? `$${n.toFixed(6)}`
+        : n < 1
+          ? `$${n.toFixed(4)}`
+          : n < 10000
+            ? `$${n.toLocaleString("en-US", { minimumFractionDigits: dp ?? 2, maximumFractionDigits: dp ?? 2 })}`
+            : `$${n.toLocaleString("en-US", { maximumFractionDigits: 0 })}`;
 
 const fmtUnits = (n) =>
   n == null

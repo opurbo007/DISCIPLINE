@@ -10,8 +10,9 @@ function formatPrice(price, category) {
   if (price === null || price === undefined) return "—";
   const absPrice = Math.abs(price);
   if (absPrice >= 1000) return price.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  if (absPrice >= 1)    return price.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 4 });
-  return price.toLocaleString("en-US", { minimumFractionDigits: 4, maximumFractionDigits: 6 });
+  if (absPrice >= 1) return price.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 4 });
+  if (absPrice >= 0.0001) return price.toLocaleString("en-US", { minimumFractionDigits: 4, maximumFractionDigits: 6 });
+  return price.toLocaleString("en-US", { minimumFractionDigits: 8, maximumFractionDigits: 10 });
 }
 
 function pricePrefix(category) {

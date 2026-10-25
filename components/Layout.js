@@ -26,10 +26,12 @@ import clsx from "clsx";
 
 function fmtPrice(price) {
   if (price == null) return "—";
-  if (price >= 10000) return price.toLocaleString("en-US", { maximumFractionDigits: 0 });
-  if (price >= 1000) return price.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  if (price >= 1) return price.toFixed(2);
-  return price.toFixed(4);
+  const abs = Math.abs(price);
+  if (abs >= 10000) return price.toLocaleString("en-US", { maximumFractionDigits: 0 });
+  if (abs >= 1000) return price.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  if (abs >= 1) return price.toFixed(2);
+  if (abs >= 0.0001) return price.toFixed(6);
+  return price.toFixed(8);
 }
 
 function TickerTape() {
