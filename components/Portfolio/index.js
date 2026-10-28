@@ -55,9 +55,9 @@ const fmtUnits = (n) =>
 const fmtPct = (n) =>
   n == null
     ? "—"
-    : n >= 0
-      ? `+${n.toFixed(2)}%`
-      : `-${n.toFixed(2)}%`;
+    : n < 0.0001
+      ? `${n >= 0 ? "+" : "-"}${n.toFixed(8)}%`
+      : `${n >= 0 ? "+" : "-"}${n.toFixed(2)}%`;
 
 const pnlClass = (n) =>
   n > 0 ? "text-emerald-400" : n < 0 ? "text-red-400" : "text-slate-500";
