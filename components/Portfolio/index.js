@@ -53,7 +53,11 @@ const fmtUnits = (n) =>
           : n.toLocaleString("en-US", { maximumFractionDigits: 2 });
 
 const fmtPct = (n) =>
-  n == null ? "—" : `${n >= 0 ? "+" : ""}${n.toFixed(2)}%`;
+  n == null
+    ? "—"
+    : n >= 0
+      ? `+${n.toFixed(2)}%`
+      : `-${n.toFixed(2)}%`;
 
 const pnlClass = (n) =>
   n > 0 ? "text-emerald-400" : n < 0 ? "text-red-400" : "text-slate-500";
