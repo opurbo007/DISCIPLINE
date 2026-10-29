@@ -59,7 +59,7 @@ const fmtPct = (n) =>
       ? `${n >= 0 ? "+" : "-"}${Math.abs(n).toFixed(8)}%`
       : n >= 0
         ? `+${n.toFixed(2)}%`
-        : `-${n.toFixed(2)}%`;
+        : `-${Math.abs(n).toFixed(2)}%`;
 
 const pnlClass = (n) =>
   n > 0 ? "text-emerald-400" : n < 0 ? "text-red-400" : "text-slate-500";
