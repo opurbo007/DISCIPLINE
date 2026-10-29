@@ -32,25 +32,25 @@ const fmt$ = (n, dp) =>
   n == null
     ? "—"
     : Math.abs(n) < 0.0001
-      ? `$${n.toFixed(8)}`
+      ? `$${Math.abs(n).toFixed(8)}`
       : Math.abs(n) < 0.01
-        ? `$${n.toFixed(6)}`
+        ? `$${Math.abs(n).toFixed(6)}`
         : Math.abs(n) < 1
-          ? `$${n.toFixed(4)}`
+          ? `$${Math.abs(n).toFixed(4)}`
           : n < 10000
-            ? `$${n.toLocaleString("en-US", { minimumFractionDigits: dp ?? 2, maximumFractionDigits: dp ?? 2 })}`
-            : `$${n.toLocaleString("en-US", { maximumFractionDigits: 0 })}`;
+            ? `$${Math.abs(n).toLocaleString("en-US", { minimumFractionDigits: dp ?? 2, maximumFractionDigits: dp ?? 2 })}`
+            : `$${Math.abs(n).toLocaleString("en-US", { maximumFractionDigits: 0 })}`;
 
 const fmtUnits = (n) =>
   n == null
     ? "—"
-    : n < 0.0001
-      ? n.toFixed(8)
-      : n < 1
-        ? n.toFixed(6)
-        : n < 1000
-          ? n.toFixed(4)
-          : n.toLocaleString("en-US", { maximumFractionDigits: 2 });
+    : Math.abs(n) < 0.0001
+      ? Math.abs(n).toFixed(8)
+      : Math.abs(n) < 1
+        ? Math.abs(n).toFixed(6)
+        : Math.abs(n) < 1000
+          ? Math.abs(n).toFixed(4)
+          : Math.abs(n).toLocaleString("en-US", { maximumFractionDigits: 2 });
 
 const fmtPct = (n) =>
   n == null
