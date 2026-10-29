@@ -56,7 +56,7 @@ const fmtPct = (n) =>
   n == null
     ? "—"
     : n < 0.0001
-      ? `-${n.toFixed(8)}%`
+      ? `${n >= 0 ? "+" : "-"}${Math.abs(n).toFixed(8)}%`
       : n >= 0
         ? `+${n.toFixed(2)}%`
         : `-${n.toFixed(2)}%`;
