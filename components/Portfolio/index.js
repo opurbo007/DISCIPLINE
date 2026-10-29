@@ -31,11 +31,11 @@ import Modal from "@/components/UI/Modal";
 const fmt$ = (n, dp) =>
   n == null
     ? "—"
-    : n < 0.0001
+    : Math.abs(n) < 0.0001
       ? `$${n.toFixed(8)}`
-      : n < 0.01
+      : Math.abs(n) < 0.01
         ? `$${n.toFixed(6)}`
-        : n < 1
+        : Math.abs(n) < 1
           ? `$${n.toFixed(4)}`
           : n < 10000
             ? `$${n.toLocaleString("en-US", { minimumFractionDigits: dp ?? 2, maximumFractionDigits: dp ?? 2 })}`
