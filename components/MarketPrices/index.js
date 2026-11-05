@@ -41,7 +41,8 @@ function useFlash(value) {
   const [flash, setFlash] = useState(null);
   const prev = useRef(value);
   useEffect(() => {
-    if (prev.current === null || prev.current === value) {
+    if (typeof value !== "number") { prev.current = value; return; }
+    if (prev.current === null || prev.current === undefined || prev.current === value) {
       prev.current = value;
       return;
     }
@@ -54,14 +55,20 @@ function useFlash(value) {
   return flash;
 }
 
-function Sparkline({ positive, negative }) {
-  const points = positive
-    ? "0,20 10,18 20,15 30,13 40,14 50,9 60,6 70,8 80,4 90,3 100,1"
-    : negative
-    ? "0,3 10,5 20,4 30,8 40,7 50,11 60,12 70,14 80,15 90,17 100,19"
-    : "0,10 10,11 20,9 30,10 40,11 50,10 60,9 70,10 80,11 90,10 100,10";
-  const color = positive ? "#34d399" : negative ? "#f87171" : "#52525b";
+function Sparkline({ values, positive, negative }) {
   const id = useRef(`g${Math.random().toString(36).slice(2)}`).current;
+  if (!Array.isArray(values) || values.length < 2) {
+    return <span className="num text-[11px] text-zinc-600">—</span>;
+  }
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const range = max - min || 1;
+  const W = 100, H = 22, PAD = 1.5;
+  const step = W / (values.length - 1);
+  const points = values
+    .map((v, i) => `${(i * step).toFixed(2)},${(H - PAD - ((v - min) / range) * (H - 2 * PAD)).toFixed(2)}`)
+    .join(" ");
+  const color = positive ? "#34d399" : negative ? "#f87171" : "#a1a1aa";
   return (
     <svg width="88" height="28" viewBox="0 0 100 22" preserveAspectRatio="none" className="overflow-visible">
       <defs>
@@ -77,9 +84,10 @@ function Sparkline({ positive, negative }) {
 }
 
 function PriceRow({ asset }) {
-  const flash = useFlash(asset.price);
-  const isPos = asset.change24h > 0;
-  const isNeg = asset.change24h < 0;
+  const flash = useFlash(Number.isFinite(asset.price) ? asset.price : null);
+  const ch = Number.isFinite(asset.change24h) ? asset.change24h : null;
+  const isPos = ch !== null && ch > 0;
+  const isNeg = ch !== null && ch < 0;
 
   return (
     <div
@@ -113,13 +121,20 @@ function PriceRow({ asset }) {
         <ChangePill change={asset.change24h} />
       </div>
       <div className="hidden sm:flex items-center justify-end">
-        <Sparkline positive={isPos} negative={isNeg} />
+        <Sparkline values={asset.spark} positive={isPos} negative={isNeg} />
       </div>
     </div>
   );
 }
 
 function ChangePill({ change }) {
+  if (!Number.isFinite(change)) {
+    return (
+      <span className="num inline-flex items-center gap-1 text-[12px] font-semibold px-2 py-1 rounded-lg border text-zinc-500 bg-white/[0.05] border-white/[0.07]">
+        —
+      </span>
+    );
+  }
   const isPos = change > 0;
   const isNeg = change < 0;
   return (
@@ -154,12 +169,14 @@ function SkeletonRow() {
 
 export default function MarketPrices() {
   const cooldown = useRefreshCooldown(REFRESH_COOLDOWN);
-  // Manual refresh only — no polling (free-server safe: avoids hammering
-  // CoinGecko/Finnhub and burning serverless execution hours).
+  // Auto-refresh every 60 s — the server cache absorbs the load (one upstream
+  // refresh per TTL no matter how many clients poll).
   const { data, error, isLoading, isValidating, mutate } = useSWR("/api/prices", {
-    refreshInterval: 0,
+    refreshInterval: 60_000,
     revalidateOnFocus: false,
     revalidateOnReconnect: false,
+    refreshWhenHidden: false,
+    refreshWhenOffline: false,
     keepPreviousData: true,
   });
 
@@ -192,6 +209,7 @@ export default function MarketPrices() {
         </div>
         <div className="ml-auto flex items-center gap-2">
           {lastUpdateStr && <span className="num hidden sm:inline text-[12px] text-zinc-500">Updated {lastUpdateStr}</span>}
+          {data?.marketOpen === false && <span className="pill text-zinc-400 bg-white/[0.05] border border-white/[0.07]">Stocks closed</span>}
           {isStale && <span className="pill text-amber-300 bg-amber-400/10 border border-amber-400/20">Delayed</span>}
           <button
             onClick={() => { if (!cooldown.onCooldown) { cooldown.start(); mutate(); } }}
@@ -233,7 +251,7 @@ export default function MarketPrices() {
       </div>
 
       <div className="px-5 py-3 border-t border-white/[0.06] flex items-center justify-between bg-white/[0.01]">
-        <p className="text-[11.5px] text-zinc-600 flex items-center gap-1.5"><Clock size={11} /> Manual refresh · server-cached</p>
+        <p className="text-[11.5px] text-zinc-600 flex items-center gap-1.5"><Clock size={11} /> Live · refreshes every 60s · server-cached</p>
         <p className="text-[11.5px] text-zinc-600">CoinGecko · Finnhub · ECB</p>
       </div>
     </div>

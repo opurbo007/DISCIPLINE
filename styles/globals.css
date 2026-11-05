@@ -130,8 +130,23 @@ body {
   .num { font-family: 'JetBrains Mono', monospace; font-variant-numeric: tabular-nums; }
 }
 
+/* Keyframes live here (not Tailwind) because .ticker-inner is a custom class —
+   Tailwind purges keyframes for utilities that are never used. */
+@keyframes ticker {
+  0%   { transform: translateX(0); }
+  100% { transform: translateX(-33.333%); } /* 3 identical copies → seamless loop */
+}
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
 .ticker-inner { animation: ticker 32s linear infinite; will-change: transform; }
 .ticker-inner:hover { animation-play-state: paused; }
+
+@media (prefers-reduced-motion: reduce) {
+  .ticker-inner { animation: none; transform: none; }
+}
 
 .shimmer-bg {
   background: linear-gradient(90deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.1) 50%, rgba(255,255,255,0.05) 100%);

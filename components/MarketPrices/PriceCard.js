@@ -56,9 +56,10 @@ export function PriceCardSkeleton({ compact = false }) {
 export default function PriceCard({ asset, compact = false }) {
   const { symbol, name, icon, price, change24h, category } = asset;
 
-  const isPositive = change24h > 0;
-  const isNegative = change24h < 0;
-  const isNeutral  = change24h === 0;
+  const hasChange = Number.isFinite(change24h);
+  const isPositive = hasChange && change24h > 0;
+  const isNegative = hasChange && change24h < 0;
+  const isNeutral  = !isPositive && !isNegative;
 
   const cardClass = clsx(
     "glass-card flex flex-col justify-between transition-all duration-300 hover:-translate-y-0.5",
@@ -123,7 +124,7 @@ export default function PriceCard({ asset, compact = false }) {
         <div className={changeClass}>
           <ChangeIcon size={compact ? 9 : 12} />
           <span className="tabular-nums">
-            {isPositive ? "+" : ""}{change24h.toFixed(2)}%
+            {hasChange ? `${isPositive ? "+" : ""}${change24h.toFixed(2)}%` : "—"}
           </span>
           {!compact && <span className="text-slate-600 font-normal text-xs">24h</span>}
         </div>

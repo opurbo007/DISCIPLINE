@@ -43,14 +43,36 @@ import {
 
 const FINNHUB_KEY = process.env.FINNHUB_KEY || "";
 
-// ── CoinGecko — 1 call for all crypto ────────────────────────────────────────
+// ── Shared helpers ────────────────────────────────────────────────────────────
+
+/** Coerce to a finite number, or null (never emit NaN/undefined to the client). */
+function num(v) {
+  const n = typeof v === "string" ? parseFloat(v) : v;
+  return Number.isFinite(n) ? n : null;
+}
+
+/** Downsample a series to at most `max` points (keeps first & last). */
+function downsample(values, max = 40) {
+  if (!Array.isArray(values)) return null;
+  const clean = values.map(num).filter((v) => v !== null);
+  if (clean.length === 0) return null;
+  if (clean.length <= max) return clean;
+  const step = (clean.length - 1) / (max - 1);
+  const out = [];
+  for (let i = 0; i < max; i++) out.push(clean[Math.round(i * step)]);
+  return out;
+}
+
+// ── CoinGecko — 1 call for all crypto (price + 24h change + 7d sparkline) ─────
 
 const COINGECKO_URL =
-  "https://api.coingecko.com/api/v3/simple/price" +
-  "?ids=bitcoin,ethereum,solana,chainlink,dogecoin,ripple,ondo-finance" +
-  "&vs_currencies=usd" +
-  "&include_24hr_change=true" +
-  "&precision=2";
+  "https://api.coingecko.com/api/v3/coins/markets" +
+  "?vs_currency=usd" +
+  "&ids=bitcoin,ethereum,solana,chainlink,dogecoin,ripple,ondo-finance" +
+  "&order=market_cap_desc" +
+  "&sparkline=true" +
+  "&price_change_percentage=24h" +
+  "&per_page=20&page=1";
 
 const CRYPTO_META = {
   bitcoin: {
@@ -181,17 +203,32 @@ async function fetchAllCrypto() {
   });
   if (!res.ok) throw new Error(`CoinGecko ${res.status}`);
   const data = await res.json();
-  if (data.status?.error_code)
-    throw new Error(`CoinGecko: ${data.status.error_message}`);
+  if (!Array.isArray(data)) {
+    if (data?.status?.error_code)
+      throw new Error(`CoinGecko: ${data.status.error_message}`);
+    throw new Error("CoinGecko: unexpected response shape");
+  }
 
-  return Object.entries(data)
-    .filter(([id]) => CRYPTO_META[id])
-    .map(([id, vals]) => ({
-      id,
-      ...CRYPTO_META[id],
-      price: vals.usd ?? 0,
-      change24h: vals.usd_24h_change ?? 0,
-    }));
+  return data
+    .filter((c) => CRYPTO_META[c.id])
+    .map((c) => {
+      // /coins/markets returns this as a plain number when price_change_percentage=24h,
+      // but older payloads nest it under { usd } — handle both.
+      const rawPct = c.price_change_percentage_24h_in_currency;
+      const change =
+        num(typeof rawPct === "object" && rawPct !== null ? rawPct.usd : rawPct) ??
+        num(c.price_change_percentage_24h);
+      return {
+        id: c.id,
+        ...CRYPTO_META[c.id],
+        price: num(c.current_price),
+        change24h: change,
+        spark: downsample(c.sparkline_in_7d?.price, 40),
+        high24h: num(c.high_24h),
+        low24h: num(c.low_24h),
+        marketCap: num(c.market_cap),
+      };
+    });
 }
 
 async function fetchFinnhubQuote(ticker, meta) {
@@ -201,7 +238,8 @@ async function fetchFinnhubQuote(ticker, meta) {
   const q = await res.json();
 
   if (!q.c && !q.pc) throw new Error(`No data for ${ticker}`);
-  const price = q.c && q.c !== 0 ? q.c : q.pc;
+  const price = Number.isFinite(q.c) && q.c !== 0 ? q.c : num(q.pc);
+  if (price === null) throw new Error(`Invalid quote for ${ticker}`);
   return {
     id: meta.id,
     symbol: meta.symbol,
@@ -209,46 +247,62 @@ async function fetchFinnhubQuote(ticker, meta) {
     icon: meta.icon,
     category: meta.category,
     price,
-    change24h: q.dp ?? 0,
+    change24h: num(q.dp), // null when Finnhub has no change (e.g. pre-market gaps)
+    // Real previous-close for context: Finnhub gives dp/pc/c directly.
+    prevClose: num(q.pc),
+    dayHigh: num(q.h),
+    dayLow: num(q.l),
   };
 }
 
+const DXY_WANTED = "EUR,JPY,GBP,CAD,SEK,CHF";
+const DXY_WEIGHTS = { EUR: 0.576, JPY: 0.136, GBP: 0.119, CAD: 0.091, SEK: 0.042, CHF: 0.036 };
+// 50.14348112 normalises the geometric mean to ~100 (ICE DXY base = 50.14348112)
+const DXY_SCALE = 50.14348112;
+
+/** Compute DXY from USD→X rates (as returned by Frankfurter / ECB daily). */
+function dxyFromRates(r) {
+  if (!r?.EUR || !r?.JPY || !r?.GBP || !r?.CAD || !r?.SEK || !r?.CHF) return null;
+  let dxy = DXY_SCALE;
+  for (const [ccy, w] of Object.entries(DXY_WEIGHTS)) {
+    const usdPer = 1 / r[ccy];
+    if (!Number.isFinite(usdPer) || usdPer <= 0) return null;
+    dxy *= Math.pow(usdPer, w);
+  }
+  return dxy;
+}
+
+/**
+ * Fetches the last 6 calendar days of ECB USD reference rates and derives
+ * both the current DXY level and its day-over-day % change (real, not 0).
+ * One request; weekends/holidays are skipped automatically by the ECB feed.
+ */
 async function fetchDXY() {
-  const url =
-    "https://api.frankfurter.app/latest?from=USD&to=EUR,JPY,GBP,CAD,SEK,CHF";
+  const fmt = (d) => d.toISOString().slice(0, 10);
+  const end = new Date();
+  const start = new Date(end.getTime() - 6 * 24 * 3600 * 1000);
+  const url = `https://api.frankfurter.app/${fmt(start)}..${fmt(end)}?from=USD&to=${DXY_WANTED}`;
   const res = await fetch(url, { headers: { Accept: "application/json" } });
 
   if (!res.ok)
     throw new Error(`Frankfurter DXY: ${res.status} ${res.statusText}`);
   const data = await res.json();
 
-  const r = data.rates;
-  if (!r?.EUR) throw new Error("Frankfurter: rates missing from response");
+  // Range response: { rates: { "YYYY-MM-DD": { EUR: …, … }, … } }
+  const entries = Object.entries(data?.rates ?? {}).sort(([a], [b]) => a.localeCompare(b));
+  if (entries.length === 0) throw new Error("Frankfurter: empty series");
 
-  const EUR_W = 0.576; // Euro
-  const JPY_W = 0.136; // Japanese Yen
-  const GBP_W = 0.119; // British Pound
-  const CAD_W = 0.091; // Canadian Dollar
-  const SEK_W = 0.042; // Swedish Krona
-  const CHF_W = 0.036; // Swiss Franc
+  const [lastDate, lastRates] = entries[entries.length - 1];
+  const price = dxyFromRates(lastRates);
+  if (price === null) throw new Error("Frankfurter: could not compute DXY from rates");
 
-  // Convert USD→X rates to X→USD (multiply = geometric mean inputs)
-  const eur = 1 / r.EUR;
-  const jpy = 1 / r.JPY;
-  const gbp = 1 / r.GBP;
-  const cad = 1 / r.CAD;
-  const sek = 1 / r.SEK;
-  const chf = 1 / r.CHF;
-
-  // Geometric weighted mean × scaling factor (50.14348112 normalises to ~100)
-  const dxy =
-    50.14348112 *
-    Math.pow(eur, EUR_W) *
-    Math.pow(jpy, JPY_W) *
-    Math.pow(gbp, GBP_W) *
-    Math.pow(cad, CAD_W) *
-    Math.pow(sek, SEK_W) *
-    Math.pow(chf, CHF_W);
+  let change24h = null;
+  if (entries.length > 1) {
+    const prevPrice = dxyFromRates(entries[entries.length - 2][1]);
+    if (prevPrice && prevPrice > 0) {
+      change24h = ((price - prevPrice) / prevPrice) * 100;
+    }
+  }
 
   return {
     id: "dxy",
@@ -256,8 +310,9 @@ async function fetchDXY() {
     name: "USD Index",
     icon: "$",
     category: "forex",
-    price: parseFloat(dxy.toFixed(3)),
-    change24h: 0, // ECB daily rates don't include intraday % change
+    price: parseFloat(price.toFixed(3)),
+    change24h: change24h === null ? null : parseFloat(change24h.toFixed(2)),
+    asOf: lastDate, // ECB publishes ~16:00 CET; DXY moves only on publication days
   };
 }
 
@@ -328,7 +383,7 @@ export default async function handler(req, res) {
   const staleMax = ttlSeconds * 4; // serve stale for up to 4× TTL before hard-block
 
   // ── A: Cache is fresh — return immediately, zero upstream calls ───────────
-  if (!isStale()) {
+  if (!isStale(ttl)) {
     const cached = getCached();
     res.setHeader(
       "Cache-Control",

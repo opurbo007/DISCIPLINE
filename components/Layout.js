@@ -35,27 +35,42 @@ function fmtPrice(price) {
 }
 
 function TickerTape() {
-  // Fetch once — no polling (free-server safe; ticker is decorative).
+  // Live feed: poll every 60 s (server cache absorbs the load — upstream
+  // is only refreshed once per TTL regardless of client count).
   const { data } = useSWR("/api/prices", {
-    refreshInterval: 0,
+    refreshInterval: 60_000,
     revalidateOnFocus: false,
     revalidateOnReconnect: false,
+    refreshWhenHidden: false,
+    refreshWhenOffline: false,
+    keepPreviousData: true,
   });
-  const markets = data?.markets || [];
+  const markets = (data?.markets || []).filter((m) => Number.isFinite(m.price));
   if (markets.length === 0) return null;
+  const updated = data?.timestamp ? new Date(data.timestamp) : null;
+  const updatedLabel = updated
+    ? updated.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: true })
+    : null;
+  const delayed = data?.stale === true;
 
   const items = [...markets, ...markets, ...markets];
 
   return (
     <div className="relative overflow-hidden border-t border-white/[0.06] bg-black/40">
+      {delayed && (
+        <div className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 z-20 hidden sm:flex items-center gap-1.5 rounded-full border border-amber-400/30 bg-[#0b0e14]/90 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-amber-300">
+          Delayed
+        </div>
+      )}
       <div className="pointer-events-none absolute left-0 top-0 bottom-0 w-24 z-10 bg-gradient-to-r from-[#0b0e14] to-transparent" />
       <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-24 z-10 bg-gradient-to-l from-[#0b0e14] to-transparent" />
       <div className="ticker-inner flex items-center h-9 w-max">
         {items.map((asset, i) => {
-          const positive = asset.change24h > 0;
-          const negative = asset.change24h < 0;
+          const ch = Number.isFinite(asset.change24h) ? asset.change24h : null;
+          const positive = ch !== null && ch > 0;
+          const negative = ch !== null && ch < 0;
           return (
-            <span key={`${asset.id}-${i}`} className="flex items-center shrink-0">
+            <span key={`${asset.id}-${i}`} className="flex items-center shrink-0" title={updatedLabel ? `${asset.name} · as of ${updatedLabel}` : asset.name}>
               <span className="flex items-center gap-2 px-4">
                 <span className="text-[11px] font-bold text-zinc-400 tracking-wide">{asset.symbol}</span>
                 <span className="num text-[12px] font-semibold text-white">{fmtPrice(asset.price)}</span>
@@ -67,7 +82,7 @@ function TickerTape() {
                     !positive && !negative && "text-zinc-500 bg-white/5"
                   )}
                 >
-                  {positive ? "+" : ""}{asset.change24h.toFixed(2)}%
+                  {ch === null ? "—" : `${positive ? "+" : ""}${ch.toFixed(2)}%`}
                 </span>
               </span>
               <span className="w-px h-3.5 bg-white/10" />
