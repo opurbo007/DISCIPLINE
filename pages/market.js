@@ -13,6 +13,10 @@ export default function MarketPage() {
     <AuthGuard>
       <Head>
         <title>Market Read · Discipline</title>
+        <meta
+          name="description"
+          content="Live BTC analysis with real CoinGecko, Fear & Greed, and ECB data — price action, 20-day trend, 30-day range, and a composite market cycle score."
+        />
       </Head>
       <Layout activePage="market">
         <MarketRead />
