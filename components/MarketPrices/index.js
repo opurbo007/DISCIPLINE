@@ -199,11 +199,11 @@ export default function MarketPrices() {
       <div className="flex flex-wrap items-center gap-3 px-5 py-4 border-b border-white/[0.06] bg-white/[0.015]">
         <div className="flex items-center gap-2.5">
           <span className="relative flex w-2.5 h-2.5">
-            <span className="absolute inline-flex w-full h-full rounded-full bg-emerald-400 opacity-60 animate-ping" />
-            <span className="relative inline-flex w-2.5 h-2.5 rounded-full bg-emerald-400" />
+            <span className={clsx("absolute inline-flex w-full h-full rounded-full opacity-60", !error && !isStale ? "bg-emerald-400 animate-ping" : "hidden")} />
+            <span className={clsx("relative inline-flex w-2.5 h-2.5 rounded-full", error ? "bg-red-400" : isStale ? "bg-amber-400" : "bg-emerald-400")} />
           </span>
           <h2 className="text-[14px] font-semibold text-white tracking-tight">
-            {isValidating ? "Updating…" : "Market overview"}
+            {error ? "Market feed unavailable" : isValidating ? "Updating market feed..." : isStale ? "Market feed delayed" : "Market feed live"}
           </h2>
           <span className="pill bg-white/[0.05] text-zinc-400 border border-white/[0.07] num">{markets.length}</span>
         </div>
@@ -225,7 +225,7 @@ export default function MarketPrices() {
       {hasErrors && !isLoading && (
         <div className="m-4 flex items-start gap-2 text-[12.5px] text-amber-200 bg-amber-400/[0.07] border border-amber-400/20 rounded-xl px-3.5 py-2.5">
           <AlertTriangle size={14} className="mt-0.5 shrink-0" />
-          {apiErrors.join(" • ")}
+          {apiErrors.join(" · ")}
         </div>
       )}
       {error && (
